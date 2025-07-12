@@ -72,7 +72,78 @@
                 </div>
             </a>
         </div>
+        
+        <!-- GST Report -->
+        <div class="col">
+            <a href="gst_report.php" class="text-decoration-none text-dark">
+                <div class="card card-box p-4">
+                    <div class="card-icon text-success">📊</div>
+                    <h5 class="mb-1">GST Report</h5>
+                    <p class="text-muted mb-0">View detailed GST reports and analytics</p>
+                </div>
+            </a>
+        </div>
     </div>
 </div>
+
+<!-- Invoice Details Modal -->
+<div class="modal fade" id="invoiceDetailsModal" tabindex="-1" aria-labelledby="invoiceDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="invoiceDetailsModalLabel">GST Invoice Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="invoiceDetailsContent">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p>Loading invoice details...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add DataTables and other required scripts -->
+<link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        // Initialize DataTable
+        $('.table').DataTable({
+            "responsive": true,
+            "pageLength": 10,
+            "ordering": true,
+            "info": true,
+            "lengthChange": true,
+            "searching": true
+        });
+        
+        // Handle view details button click
+        $('.view-details').on('click', function() {
+            const invoiceId = $(this).data('id');
+            $('#invoiceDetailsContent').html('<div class="text-center"><div class="spinner-border text-primary" role="status"></div><p>Loading invoice details...</p></div>');
+            
+            // Load invoice details via AJAX
+            $.ajax({
+                url: 'gst_invoice_details.php?id=' + invoiceId,
+                type: 'GET',
+                success: function(response) {
+                    $('#invoiceDetailsContent').html(response);
+                },
+                error: function() {
+                    $('#invoiceDetailsContent').html('<div class="alert alert-danger">Error loading invoice details. Please try again.</div>');
+                }
+            });
+        });
+    });
+</script>
 
 <?php require_once '../includes/footer.php'; ?>
