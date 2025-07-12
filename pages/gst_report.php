@@ -106,6 +106,48 @@ $total_invoices = count($invoices_data);
         <li class="breadcrumb-item"><a href="../pages/dashboard.php">Dashboard</a></li>
         <li class="breadcrumb-item active">GST Invoice Report</li>
     </ol>
+    
+    <!-- Print-specific styles -->
+    <style>
+        @media print {
+            /* Hide everything by default */
+            #layoutSidenav_nav, #layoutSidenav_content > nav, .card-header, .no-print, .dataTables_length, 
+            .dataTables_filter, .dataTables_info, .dataTables_paginate, form {
+                display: none !important;
+            }
+            
+            /* Table styling for print */
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+            }
+            
+            th, td {
+                padding: 5px !important;
+                border: 1px solid #000 !important;
+            }
+            
+            /* Add title to the printed page */
+            .print-section:before {
+                content: "GST Report" !important;
+                display: block !important;
+                font-size: 18pt !important;
+                font-weight: bold !important;
+                margin-bottom: 15px !important;
+                text-align: center !important;
+            }
+            
+            /* Ensure proper page setup */
+            @page {
+                size: landscape;
+                margin: 1cm;
+            }
+            
+            body {
+                padding: 15px !important;
+            }
+        }
+    </style>
 
     <!-- Filter Form -->
     <form method="get" class="row g-3 mb-4">
@@ -186,13 +228,18 @@ $total_invoices = count($invoices_data);
 
     <!-- GST Invoices Table -->
     <div class="card mb-4">
-        <div class="card-header">
-            <i class="fas fa-table me-1"></i>
-            GST Invoices
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <i class="fas fa-table me-1"></i>
+                GST Invoices
+            </div>
+            <div class="no-print">
+                <button onclick="window.print()" class="btn btn-sm btn-primary">🖨️ Print Report</button>
+            </div>
         </div>
         <div class="card-body">
     <?php if ($invoices->num_rows > 0 && !$hsn_summary): ?>
-        <div class="table-responsive mt-4">
+        <div class="table-responsive mt-4 print-section">
             <table class="table table-bordered table-striped" id="gst-invoices-table">
                 <thead>
                     <tr>
@@ -261,8 +308,10 @@ $total_invoices = count($invoices_data);
                 </div>
             <?php elseif ($invoices->num_rows > 0 && $hsn_summary): ?>
                 <!-- HSN/SAC Summary Report -->
-                <h4 class="mt-3 mb-3">HSN/SAC Summary Report (<?= date('d-m-Y', strtotime($from_date)) ?> to <?= date('d-m-Y', strtotime($to_date)) ?>)</h4>
-                <div class="table-responsive">
+                <div class="no-print mb-3">
+                    <h4 class="mt-3 mb-3">HSN/SAC Summary Report (<?= date('d-m-Y', strtotime($from_date)) ?> to <?= date('d-m-Y', strtotime($to_date)) ?>)</h4>
+                </div>
+                <div class="table-responsive print-section">
                     <table class="table table-bordered table-striped" id="hsn-summary-table">
                         <thead>
                             <tr>
@@ -399,31 +448,48 @@ $total_invoices = count($invoices_data);
 
 <!-- Create a separate file for AJAX loading of invoice details -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize DataTable for detailed GST report
-    if (document.getElementById('gstInvoicesTable')) {
-        new DataTable('#gstInvoicesTable', {
-            order: [[0, 'desc']], // Sort by date descending
-            pageLength: 25,
-            scrollX: true,
-            columnDefs: [
-                { className: 'text-nowrap', targets: '_all' }
-            ]
-        });
-    }
+$(document).ready(function() {
+    $('#gst-invoices-table').DataTable({
+        "order": [[0, "desc"]],
+        "pageLength": 25,
+        "scrollX": true,
+        "columnDefs": [
+            { "className": "text-nowrap", "targets": "_all" }
+        ]
+    });
     
-    // Initialize DataTable for HSN/SAC summary report
-    if (document.getElementById('hsn-summary-table')) {
-        new DataTable('#hsn-summary-table', {
-            order: [[0, 'asc']], // Sort by HSN/SAC ascending
-            pageLength: 50,
-            scrollX: true,
-            columnDefs: [
-                { className: 'text-nowrap', targets: '_all' }
-            ]
-        });
-    }
+    $('#hsn-summary-table').DataTable({
+        "order": [[0, "asc"]],
+        "pageLength": 50,
+        "scrollX": true,
+        "columnDefs": [
+            { "className": "text-nowrap", "targets": "_all" }
+        ]
+    });
+    
+    // Print function for both report types
+    $('.print-button').on('click', function() {
+        // Add a title to the print based on which report is being printed
+        let reportTitle = '';
+        if ($(this).data('report-type') === 'detailed') {
+            reportTitle = 'GST Detailed Report';
+        } else {
+            reportTitle = 'HSN/SAC Summary Report';
+        }
+        
+        // Store the title in a data attribute to be used by CSS
+        $('.print-section').attr('data-print-title', reportTitle);
+        
+        // Print the page
+        window.print();
+        
+        return false;
+    });
+});
+</script>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
     // Handle view details button clicks
     document.querySelectorAll('.view-details').forEach(button => {
         button.addEventListener('click', function() {
