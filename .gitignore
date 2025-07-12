@@ -1,0 +1,36 @@
+# Configuration files
+# We'll include a sample config instead of ignoring config.php
+
+# Ignore log files
+/logs/
+*.log
+
+# Ignore user uploaded content
+/uploads/
+
+# Ignore temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# Ignore OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Ignore IDE/Editor folders
+/.idea/
+/.vscode/
+*.sublime-*
+
+# Ignore composer dependencies
+/vendor/
+composer.lock
+
+# Ignore node modules
+/node_modules/
+package-lock.json
+
+# Ignore cache files
+*.cache
