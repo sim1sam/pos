@@ -317,6 +317,7 @@ $total_invoices = count($invoices_data);
                             <tr>
                                 <th>HSN/SAC</th>
                                 <th>Rate</th>
+                                <th>QTY</th>
                                 <th>Amount</th>
                                 <th>CGST</th>
                                 <th>SGST</th>
@@ -330,6 +331,7 @@ $total_invoices = count($invoices_data);
                             $hsn_query = "SELECT 
                                 id.hsn_sac,
                                 MAX(id.description) as description,
+                                SUM(id.qty) as total_qty,
                                 SUM(id.amount) as total_amount,
                                 SUM(id.cgst_amount) as total_cgst,
                                 SUM(id.sgst_amount) as total_sgst,
@@ -373,6 +375,7 @@ $total_invoices = count($invoices_data);
                             $total_sgst = 0;
                             $total_igst = 0;
                             $total_amount = 0;
+                            $total_qty = 0;
                             
                             while ($hsn = $hsn_result->fetch_assoc()):
                                 // Get GST rate from gst_config table
@@ -393,11 +396,13 @@ $total_invoices = count($invoices_data);
                                 $total_sgst += $hsn['total_sgst'];
                                 $total_igst += $hsn['total_igst'];
                                 $total_amount += $hsn['grand_total'];
+                                $total_qty += $hsn['total_qty'];
                             ?>
                                 <?php if (!empty($hsn['hsn_sac'])): ?>
                                 <tr>
                                     <td><?= htmlspecialchars($hsn['hsn_sac']) ?></td>
                                     <td><?= number_format($gst_rate, 2) ?>%</td>
+                                    <td><?= number_format($hsn['total_qty'], 0) ?></td>
                                     <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($hsn['total_amount']), 0) ?></td>
                                     <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($hsn['total_cgst']), 0) ?></td>
                                     <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($hsn['total_sgst']), 0) ?></td>
@@ -408,6 +413,7 @@ $total_invoices = count($invoices_data);
                             <?php endwhile; ?>
                             <tr class="table-dark fw-bold">
                                 <td colspan="2" class="text-end">Total:</td>
+                                <td><?= number_format($total_qty, 0) ?></td>
                                 <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($total_taxable), 0) ?></td>
                                 <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($total_cgst), 0) ?></td>
                                 <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($total_sgst), 0) ?></td>
