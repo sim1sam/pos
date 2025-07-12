@@ -267,7 +267,6 @@ $total_invoices = count($invoices_data);
                         <thead>
                             <tr>
                                 <th>HSN/SAC</th>
-                                <th>Description</th>
                                 <th>Rate</th>
                                 <th>Amount</th>
                                 <th>CGST</th>
@@ -346,9 +345,9 @@ $total_invoices = count($invoices_data);
                                 $total_igst += $hsn['total_igst'];
                                 $total_amount += $hsn['grand_total'];
                             ?>
+                                <?php if (!empty($hsn['hsn_sac'])): ?>
                                 <tr>
-                                    <td><?= htmlspecialchars($hsn['hsn_sac'] ?? 'N/A') ?></td>
-                                    <td><?= htmlspecialchars($hsn['description']) ?></td>
+                                    <td><?= htmlspecialchars($hsn['hsn_sac']) ?></td>
                                     <td><?= number_format($gst_rate, 2) ?>%</td>
                                     <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($hsn['total_amount']), 0) ?></td>
                                     <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($hsn['total_cgst']), 0) ?></td>
@@ -356,9 +355,10 @@ $total_invoices = count($invoices_data);
                                     <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($hsn['total_igst']), 0) ?></td>
                                     <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($hsn['grand_total']), 0) ?></td>
                                 </tr>
+                                <?php endif; ?>
                             <?php endwhile; ?>
                             <tr class="table-dark fw-bold">
-                                <td colspan="3" class="text-end">Total:</td>
+                                <td colspan="2" class="text-end">Total:</td>
                                 <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($total_taxable), 0) ?></td>
                                 <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($total_cgst), 0) ?></td>
                                 <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($total_sgst), 0) ?></td>
