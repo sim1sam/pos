@@ -11,6 +11,7 @@ $from_date = isset($_GET['from']) && !empty($_GET['from']) ? $_GET['from'] : $fi
 $to_date = isset($_GET['to']) && !empty($_GET['to']) ? $_GET['to'] : $today;
 $filter_customer = isset($_GET['customer_id']) && !empty($_GET['customer_id']) ? intval($_GET['customer_id']) : null;
 $filter_status = isset($_GET['status']) && !empty($_GET['status']) ? $_GET['status'] : null;
+$hsn_summary = isset($_GET['hsn_summary']) && $_GET['hsn_summary'] == '1';
 
 // Get all customers for the filter dropdown
 $customers = $conn->query("SELECT id, name FROM customers ORDER BY name");
@@ -137,9 +138,12 @@ $total_invoices = count($invoices_data);
             <input type="date" name="to" class="form-control" value="<?= htmlspecialchars($to_date) ?>">
         </div>
         <div class="col-md-2 d-flex align-items-end">
-            <button type="submit" class="btn btn-primary w-100">Filter</button>
+            <button type="submit" class="btn btn-primary w-100">Generate Report</button>
         </div>
-        <div class="col-md-1 d-flex align-items-end">
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" name="hsn_summary" value="1" class="btn btn-info w-100">HSN/SAC Summary</button>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
             <a href="gst_report.php" class="btn btn-secondary w-100">Reset</a>
         </div>
     </form>
@@ -187,25 +191,25 @@ $total_invoices = count($invoices_data);
             GST Invoices
         </div>
         <div class="card-body">
-            <?php if ($invoices->num_rows > 0): ?>
-                <div class="table-responsive">
-                    <table class="table table-bordered table-hover" id="gstInvoicesTable">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Invoice #</th>
-                                <th>Customer</th>
-                                <th>HSN/SAC</th>
-                                <th>Description</th>
-                                <th>Rate</th>
-                                <th>Amount</th>
-                                <th>CGST</th>
-                                <th>SGST</th>
-                                <th>IGST</th>
-                                <th>Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
+    <?php if ($invoices->num_rows > 0 && !$hsn_summary): ?>
+        <div class="table-responsive mt-4">
+            <table class="table table-bordered table-striped" id="gst-invoices-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Invoice #</th>
+                        <th>Customer</th>
+                        <th>HSN/SAC</th>
+                        <th>Description</th>
+                        <th>Rate</th>
+                        <th>Amount</th>
+                        <th>CGST</th>
+                        <th>SGST</th>
+                        <th>IGST</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
                             <?php 
                             // Reset the result pointer
                             $invoices->data_seek(0);
@@ -240,11 +244,11 @@ $total_invoices = count($invoices_data);
                                     <td><?= htmlspecialchars($item['hsn_sac'] ?? 'N/A') ?></td>
                                     <td><?= htmlspecialchars($item['description']) ?></td>
                                     <td><?= number_format($item['rate'], 2) ?></td>
-                                    <td><?= CURRENCY_SYMBOL ?> <?= number_format($item['amount'], 2) ?></td>
-                                    <td><?= CURRENCY_SYMBOL ?> <?= number_format($item['cgst_amount'], 2) ?></td>
-                                    <td><?= CURRENCY_SYMBOL ?> <?= number_format($item['sgst_amount'], 2) ?></td>
-                                    <td><?= CURRENCY_SYMBOL ?> <?= number_format($item['igst_amount'], 2) ?></td>
-                                    <td><?= CURRENCY_SYMBOL ?> <?= number_format($item['total'], 2) ?></td>
+                                    <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($item['amount']), 0) ?></td>
+                                    <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($item['cgst_amount']), 0) ?></td>
+                                    <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($item['sgst_amount']), 0) ?></td>
+                                    <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($item['igst_amount']), 0) ?></td>
+                                    <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($item['total']), 0) ?></td>
                                 </tr>
                             <?php 
                                     endwhile;
@@ -252,6 +256,115 @@ $total_invoices = count($invoices_data);
                                 $stmt->close();
                             endwhile; 
                             ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php elseif ($invoices->num_rows > 0 && $hsn_summary): ?>
+                <!-- HSN/SAC Summary Report -->
+                <h4 class="mt-3 mb-3">HSN/SAC Summary Report (<?= date('d-m-Y', strtotime($from_date)) ?> to <?= date('d-m-Y', strtotime($to_date)) ?>)</h4>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped" id="hsn-summary-table">
+                        <thead>
+                            <tr>
+                                <th>HSN/SAC</th>
+                                <th>Description</th>
+                                <th>Rate</th>
+                                <th>Amount</th>
+                                <th>CGST</th>
+                                <th>SGST</th>
+                                <th>IGST</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            // Query to get HSN/SAC summary
+                            $hsn_query = "SELECT 
+                                id.hsn_sac,
+                                MAX(id.description) as description,
+                                SUM(id.amount) as total_amount,
+                                SUM(id.cgst_amount) as total_cgst,
+                                SUM(id.sgst_amount) as total_sgst,
+                                SUM(id.igst_amount) as total_igst,
+                                SUM(id.total) as grand_total
+                            FROM 
+                                invoice_details id
+                            JOIN 
+                                invoices i ON id.invoice_id = i.id
+                            WHERE 
+                                i.is_gst_invoice = 1
+                                AND i.invoice_date BETWEEN ? AND ?";
+                            
+                            if ($filter_customer) {
+                                $hsn_query .= " AND i.customer_id = ?";
+                            }
+                            
+                            if ($filter_status) {
+                                $hsn_query .= " AND i.status = ?";
+                            }
+                            
+                            $hsn_query .= " GROUP BY id.hsn_sac ORDER BY id.hsn_sac";
+                            
+                            $hsn_stmt = $conn->prepare($hsn_query);
+                            
+                            if ($filter_customer && $filter_status) {
+                                $hsn_stmt->bind_param("ssis", $from_date, $to_date, $filter_customer, $filter_status);
+                            } elseif ($filter_customer) {
+                                $hsn_stmt->bind_param("ssi", $from_date, $to_date, $filter_customer);
+                            } elseif ($filter_status) {
+                                $hsn_stmt->bind_param("sss", $from_date, $to_date, $filter_status);
+                            } else {
+                                $hsn_stmt->bind_param("ss", $from_date, $to_date);
+                            }
+                            
+                            $hsn_stmt->execute();
+                            $hsn_result = $hsn_stmt->get_result();
+                            
+                            $total_taxable = 0;
+                            $total_cgst = 0;
+                            $total_sgst = 0;
+                            $total_igst = 0;
+                            $total_amount = 0;
+                            
+                            while ($hsn = $hsn_result->fetch_assoc()):
+                                // Get GST rate from gst_config table
+                                $gst_query = "SELECT gst_rate FROM gst_config WHERE hsn_sac = ? LIMIT 1";
+                                $gst_stmt = $conn->prepare($gst_query);
+                                $gst_stmt->bind_param("s", $hsn['hsn_sac']);
+                                $gst_stmt->execute();
+                                $gst_result = $gst_stmt->get_result();
+                                $gst_rate = 0;
+                                
+                                if ($gst_row = $gst_result->fetch_assoc()) {
+                                    $gst_rate = $gst_row['gst_rate'];
+                                }
+                                $gst_stmt->close();
+                                
+                                $total_taxable += $hsn['total_amount'];
+                                $total_cgst += $hsn['total_cgst'];
+                                $total_sgst += $hsn['total_sgst'];
+                                $total_igst += $hsn['total_igst'];
+                                $total_amount += $hsn['grand_total'];
+                            ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($hsn['hsn_sac'] ?? 'N/A') ?></td>
+                                    <td><?= htmlspecialchars($hsn['description']) ?></td>
+                                    <td><?= number_format($gst_rate, 2) ?>%</td>
+                                    <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($hsn['total_amount']), 0) ?></td>
+                                    <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($hsn['total_cgst']), 0) ?></td>
+                                    <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($hsn['total_sgst']), 0) ?></td>
+                                    <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($hsn['total_igst']), 0) ?></td>
+                                    <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($hsn['grand_total']), 0) ?></td>
+                                </tr>
+                            <?php endwhile; ?>
+                            <tr class="table-dark fw-bold">
+                                <td colspan="3" class="text-end">Total:</td>
+                                <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($total_taxable), 0) ?></td>
+                                <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($total_cgst), 0) ?></td>
+                                <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($total_sgst), 0) ?></td>
+                                <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($total_igst), 0) ?></td>
+                                <td><?= CURRENCY_SYMBOL ?> <?= number_format(round($total_amount), 0) ?></td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -287,11 +400,23 @@ $total_invoices = count($invoices_data);
 <!-- Create a separate file for AJAX loading of invoice details -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize DataTable
+    // Initialize DataTable for detailed GST report
     if (document.getElementById('gstInvoicesTable')) {
         new DataTable('#gstInvoicesTable', {
             order: [[0, 'desc']], // Sort by date descending
             pageLength: 25,
+            scrollX: true,
+            columnDefs: [
+                { className: 'text-nowrap', targets: '_all' }
+            ]
+        });
+    }
+    
+    // Initialize DataTable for HSN/SAC summary report
+    if (document.getElementById('hsn-summary-table')) {
+        new DataTable('#hsn-summary-table', {
+            order: [[0, 'asc']], // Sort by HSN/SAC ascending
+            pageLength: 50,
             scrollX: true,
             columnDefs: [
                 { className: 'text-nowrap', targets: '_all' }
