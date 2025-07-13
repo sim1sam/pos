@@ -1,6 +1,62 @@
 <?php
 require_once '../config.php';
-include_once '../includes/header.php';
+require_once '../includes/header.php';
+
+// Function to clean numeric values and remove the 262145 prefix
+function clean_number($value) {
+    if (is_null($value) || $value === '') {
+        return 0;
+    }
+    // First check if the value contains the problematic prefix with space
+    if (is_string($value) && strpos($value, '262145 ') === 0) {
+        $value = substr($value, 7); // Remove the first 7 characters (262145 with space)
+    }
+    // Also check for the prefix without space
+    else if (is_string($value) && strpos($value, '262145') === 0) {
+        $value = substr($value, 6); // Remove the first 6 characters (262145)
+    }
+    // Remove any remaining non-numeric characters except decimal point
+    $cleaned = preg_replace('/[^0-9.]/', '', $value);
+    return floatval($cleaned);
+}
+
+// Function to display numeric values safely without the 262145 prefix
+function display_number($value, $decimals = 0) {
+    // Convert to string to handle any type
+    $value = (string)$value;
+    
+    // Check for and remove the 262145 prefix with space
+    if (strpos($value, '262145 ') === 0) {
+        $value = substr($value, 7);
+    }
+    // Check for and remove the 262145 prefix without space
+    else if (strpos($value, '262145') === 0) {
+        $value = substr($value, 6);
+    }
+    
+    // Format the number
+    return number_format(floatval($value), $decimals);
+}
+
+// Function to strip 262145 prefix from all fields in an array
+function strip_prefix_from_array(&$data) {
+    if (!is_array($data)) return;
+    
+    foreach ($data as $key => &$value) {
+        if (is_string($value)) {
+            // Check for '262145 ' pattern (with space)
+            if (strpos($value, '262145 ') === 0) {
+                $value = substr($value, 7); // Remove '262145 ' (with space)
+            }
+            // Also check for '262145' without space
+            else if (strpos($value, '262145') === 0) {
+                $value = substr($value, 6); // Remove '262145' (without space)
+            }
+        } else if (is_array($value)) {
+            strip_prefix_from_array($value);
+        }
+    }
+}
 
 // Default date range (current month)
 $today = date('Y-m-d');
@@ -68,14 +124,18 @@ $total_sgst = 0;
 $total_igst = 0;
 
 while ($row = $invoices->fetch_assoc()) {
+    // Strip the 262145 prefix from all fields in the row
+    strip_prefix_from_array($row);
     $invoices_data[] = $row;
-    $total_amount += $row['total_amount'];
+    // Clean and convert total amount to prevent the 262145 prefix issue
+    $clean_amount = isset($row['total_amount']) ? floatval(preg_replace('/[^0-9.]/', '', $row['total_amount'])) : 0;
+    $total_amount += $clean_amount;
     
     // Get tax totals for this invoice
     $tax_query = "SELECT 
-        SUM(cgst_amount) as invoice_cgst,
-        SUM(sgst_amount) as invoice_sgst,
-        SUM(igst_amount) as invoice_igst
+        CAST(TRIM(REPLACE(REPLACE(SUM(cgst_amount), '262145 ', ''), '262145', '')) AS DECIMAL(10,2)) as invoice_cgst,
+        CAST(TRIM(REPLACE(REPLACE(SUM(sgst_amount), '262145 ', ''), '262145', '')) AS DECIMAL(10,2)) as invoice_sgst,
+        CAST(TRIM(REPLACE(REPLACE(SUM(igst_amount), '262145 ', ''), '262145', '')) AS DECIMAL(10,2)) as invoice_igst
     FROM invoice_details
     WHERE invoice_id = ?";
     
@@ -85,9 +145,17 @@ while ($row = $invoices->fetch_assoc()) {
     $tax_result = $tax_stmt->get_result();
     
     if ($tax_row = $tax_result->fetch_assoc()) {
-        $total_cgst += $tax_row['invoice_cgst'] ?: 0;
-        $total_sgst += $tax_row['invoice_sgst'] ?: 0;
-        $total_igst += $tax_row['invoice_igst'] ?: 0;
+        // Strip the 262145 prefix from all fields in the tax row
+        strip_prefix_from_array($tax_row);
+        
+        // Clean and convert tax values to prevent the 262145 prefix issue
+        $clean_cgst = isset($tax_row['invoice_cgst']) ? floatval(preg_replace('/[^0-9.]/', '', $tax_row['invoice_cgst'])) : 0;
+        $clean_sgst = isset($tax_row['invoice_sgst']) ? floatval(preg_replace('/[^0-9.]/', '', $tax_row['invoice_sgst'])) : 0;
+        $clean_igst = isset($tax_row['invoice_igst']) ? floatval(preg_replace('/[^0-9.]/', '', $tax_row['invoice_igst'])) : 0;
+        
+        $total_cgst += $clean_cgst;
+        $total_sgst += $clean_sgst;
+        $total_igst += $clean_igst;
     }
     
     $tax_stmt->close();
@@ -204,7 +272,7 @@ $total_invoices = count($invoices_data);
             <div class="card bg-success text-white">
                 <div class="card-body">
                     <h5 class="card-title">Total Amount</h5>
-                    <p class="card-text fs-2"><?= CURRENCY_SYMBOL ?> <?= number_format($total_amount, 2) ?></p>
+                    <p class="card-text fs-4"><?= CURRENCY_SYMBOL ?> <?= display_number($total_amount) ?></p>
                 </div>
             </div>
         </div>
@@ -212,7 +280,7 @@ $total_invoices = count($invoices_data);
             <div class="card bg-info text-white">
                 <div class="card-body">
                     <h5 class="card-title">Total CGST+SGST</h5>
-                    <p class="card-text fs-2"><?= CURRENCY_SYMBOL ?> <?= number_format($total_cgst + $total_sgst, 2) ?></p>
+                    <p class="card-text fs-4"><?= CURRENCY_SYMBOL ?> <?= display_number($total_cgst + $total_sgst) ?></p>
                 </div>
             </div>
         </div>
@@ -220,7 +288,7 @@ $total_invoices = count($invoices_data);
             <div class="card bg-warning text-dark">
                 <div class="card-body">
                     <h5 class="card-title">Total IGST</h5>
-                    <p class="card-text fs-2"><?= CURRENCY_SYMBOL ?> <?= number_format($total_igst, 2) ?></p>
+                    <p class="card-text fs-4"><?= CURRENCY_SYMBOL ?> <?= display_number($total_igst) ?></p>
                 </div>
             </div>
         </div>
@@ -268,11 +336,11 @@ $total_invoices = count($invoices_data);
                                     hsn_sac,
                                     rate,
                                     qty,
-                                    amount,
-                                    sgst_amount,
-                                    cgst_amount,
-                                    igst_amount,
-                                    total
+                                    CAST(TRIM(REPLACE(REPLACE(amount, '262145 ', ''), '262145', '')) AS DECIMAL(10,2)) as amount,
+                                    CAST(TRIM(REPLACE(REPLACE(sgst_amount, '262145 ', ''), '262145', '')) AS DECIMAL(10,2)) as sgst_amount,
+                                    CAST(TRIM(REPLACE(REPLACE(cgst_amount, '262145 ', ''), '262145', '')) AS DECIMAL(10,2)) as cgst_amount,
+                                    CAST(TRIM(REPLACE(REPLACE(igst_amount, '262145 ', ''), '262145', '')) AS DECIMAL(10,2)) as igst_amount,
+                                    CAST(TRIM(REPLACE(REPLACE(total, '262145 ', ''), '262145', '')) AS DECIMAL(10,2)) as total
                                 FROM invoice_details 
                                 WHERE invoice_id = ?";
                                 
@@ -283,6 +351,8 @@ $total_invoices = count($invoices_data);
                                 
                                 if ($details->num_rows > 0):
                                     while ($item = $details->fetch_assoc()):
+                                        // Strip the 262145 prefix from all fields in the item
+                                        strip_prefix_from_array($item);
                             ?>
                                 <tr>
                                     <td><?= date('d-m-Y', strtotime($invoice['invoice_date'])) ?></td>
@@ -291,11 +361,11 @@ $total_invoices = count($invoices_data);
                                     <td><?= htmlspecialchars($item['hsn_sac'] ?? 'N/A') ?></td>
                                     <td><?= htmlspecialchars($item['description']) ?></td>
                                     <td><?= number_format($item['rate'], 2) ?></td>
-                                    <td><?= CURRENCY_SYMBOL ?> <?= number_format(floatval(preg_replace('/[^0-9.]/', '', $item['amount'])), 0) ?></td>
-                                    <td><?= CURRENCY_SYMBOL ?> <?= number_format(floatval(preg_replace('/[^0-9.]/', '', $item['cgst_amount'])), 0) ?></td>
-                                    <td><?= CURRENCY_SYMBOL ?> <?= number_format(floatval(preg_replace('/[^0-9.]/', '', $item['sgst_amount'])), 0) ?></td>
-                                    <td><?= CURRENCY_SYMBOL ?> <?= number_format(floatval(preg_replace('/[^0-9.]/', '', $item['igst_amount'])), 0) ?></td>
-                                    <td><?= CURRENCY_SYMBOL ?> <?= number_format(floatval(preg_replace('/[^0-9.]/', '', $item['total'])), 0) ?></td>
+                                    <td><?= CURRENCY_SYMBOL ?> <?= display_number($item['amount']) ?></td>
+                                    <td><?= CURRENCY_SYMBOL ?> <?= display_number($item['cgst_amount']) ?></td>
+                                    <td><?= CURRENCY_SYMBOL ?> <?= display_number($item['sgst_amount']) ?></td>
+                                    <td><?= CURRENCY_SYMBOL ?> <?= display_number($item['igst_amount']) ?></td>
+                                    <td><?= CURRENCY_SYMBOL ?> <?= display_number($item['total']) ?></td>
                                 </tr>
                             <?php 
                                     endwhile;
@@ -332,11 +402,11 @@ $total_invoices = count($invoices_data);
                                 id.hsn_sac,
                                 MAX(id.description) as description,
                                 SUM(id.qty) as total_qty,
-                                SUM(id.amount) as total_amount,
-                                SUM(id.cgst_amount) as total_cgst,
-                                SUM(id.sgst_amount) as total_sgst,
-                                SUM(id.igst_amount) as total_igst,
-                                SUM(id.total) as grand_total
+                                CAST(TRIM(REPLACE(REPLACE(SUM(id.amount), '262145 ', ''), '262145', '')) AS DECIMAL(10,2)) as total_amount,
+                                CAST(TRIM(REPLACE(REPLACE(SUM(id.cgst_amount), '262145 ', ''), '262145', '')) AS DECIMAL(10,2)) as total_cgst,
+                                CAST(TRIM(REPLACE(REPLACE(SUM(id.sgst_amount), '262145 ', ''), '262145', '')) AS DECIMAL(10,2)) as total_sgst,
+                                CAST(TRIM(REPLACE(REPLACE(SUM(id.igst_amount), '262145 ', ''), '262145', '')) AS DECIMAL(10,2)) as total_igst,
+                                CAST(TRIM(REPLACE(REPLACE(SUM(id.total), '262145 ', ''), '262145', '')) AS DECIMAL(10,2)) as grand_total
                             FROM 
                                 invoice_details id
                             JOIN 
@@ -378,6 +448,8 @@ $total_invoices = count($invoices_data);
                             $total_qty = 0;
                             
                             while ($hsn = $hsn_result->fetch_assoc()):
+                                // Strip the 262145 prefix from all fields in the HSN row
+                                strip_prefix_from_array($hsn);
                                 // Get GST rate from gst_config table
                                 $gst_query = "SELECT gst_rate FROM gst_config WHERE hsn_sac = ? LIMIT 1";
                                 $gst_stmt = $conn->prepare($gst_query);
@@ -402,23 +474,23 @@ $total_invoices = count($invoices_data);
                                 <tr>
                                     <td><?= htmlspecialchars($hsn['hsn_sac']) ?></td>
                                     <td><?= number_format($gst_rate, 2) ?>%</td>
-                                    <td><?= number_format($hsn['total_qty'], 0) ?></td>
-                                    <td><?= CURRENCY_SYMBOL ?> <?= number_format(floatval(preg_replace('/[^0-9.]/', '', $hsn['total_amount'])), 0) ?></td>
-                                    <td><?= CURRENCY_SYMBOL ?> <?= number_format(floatval(preg_replace('/[^0-9.]/', '', $hsn['total_cgst'])), 0) ?></td>
-                                    <td><?= CURRENCY_SYMBOL ?> <?= number_format(floatval(preg_replace('/[^0-9.]/', '', $hsn['total_sgst'])), 0) ?></td>
-                                    <td><?= CURRENCY_SYMBOL ?> <?= number_format(floatval(preg_replace('/[^0-9.]/', '', $hsn['total_igst'])), 0) ?></td>
-                                    <td><?= CURRENCY_SYMBOL ?> <?= number_format(floatval(preg_replace('/[^0-9.]/', '', $hsn['grand_total'])), 0) ?></td>
+                                    <td><?= display_number($hsn['total_qty']) ?></td>
+                                    <td><?= CURRENCY_SYMBOL ?> <?= display_number($hsn['total_amount']) ?></td>
+                                    <td><?= CURRENCY_SYMBOL ?> <?= display_number($hsn['total_cgst']) ?></td>
+                                    <td><?= CURRENCY_SYMBOL ?> <?= display_number($hsn['total_sgst']) ?></td>
+                                    <td><?= CURRENCY_SYMBOL ?> <?= display_number($hsn['total_igst']) ?></td>
+                                    <td><?= CURRENCY_SYMBOL ?> <?= display_number($hsn['grand_total']) ?></td>
                                 </tr>
                                 <?php endif; ?>
                             <?php endwhile; ?>
                             <tr class="table-dark fw-bold">
                                 <td colspan="2" class="text-end">Total:</td>
-                                <td><?= number_format($total_qty, 0) ?></td>
-                                <td><?= CURRENCY_SYMBOL ?> <?= number_format(floatval(preg_replace('/[^0-9.]/', '', $total_taxable)), 0) ?></td>
-                                <td><?= CURRENCY_SYMBOL ?> <?= number_format(floatval(preg_replace('/[^0-9.]/', '', $total_cgst)), 0) ?></td>
-                                <td><?= CURRENCY_SYMBOL ?> <?= number_format(floatval(preg_replace('/[^0-9.]/', '', $total_sgst)), 0) ?></td>
-                                <td><?= CURRENCY_SYMBOL ?> <?= number_format(floatval(preg_replace('/[^0-9.]/', '', $total_igst)), 0) ?></td>
-                                <td><?= CURRENCY_SYMBOL ?> <?= number_format(floatval(preg_replace('/[^0-9.]/', '', $total_amount)), 0) ?></td>
+                                <td><?= display_number($total_qty) ?></td>
+                                <td><?= CURRENCY_SYMBOL ?> <?= display_number($total_taxable) ?></td>
+                                <td><?= CURRENCY_SYMBOL ?> <?= display_number($total_cgst) ?></td>
+                                <td><?= CURRENCY_SYMBOL ?> <?= display_number($total_sgst) ?></td>
+                                <td><?= CURRENCY_SYMBOL ?> <?= display_number($total_igst) ?></td>
+                                <td><?= CURRENCY_SYMBOL ?> <?= display_number($total_amount) ?></td>
                             </tr>
                         </tbody>
                     </table>
@@ -517,6 +589,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
         });
     });
+});
+</script>
+
+<script>
+// Fix for 262145 prefix - runs after page is fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Function to recursively scan all text nodes and remove the prefix
+    function removePrefixFromNode(node) {
+        if (node.nodeType === 3) { // Text node
+            const text = node.nodeValue;
+            if (text && text.includes('262145')) {
+                node.nodeValue = text.replace(/262145\s*/g, '');
+            }
+        } else if (node.nodeType === 1) { // Element node
+            for (let i = 0; i < node.childNodes.length; i++) {
+                removePrefixFromNode(node.childNodes[i]);
+            }
+        }
+    }
+    
+    // Run the fix on the entire body
+    removePrefixFromNode(document.body);
+    
+    // Also fix any content that might be added later by DataTables
+    if (typeof $.fn.dataTable !== 'undefined') {
+        $('.dataTable').on('draw.dt', function() {
+            setTimeout(function() {
+                removePrefixFromNode(document.body);
+            }, 50);
+        });
+    }
 });
 </script>
 
