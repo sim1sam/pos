@@ -350,11 +350,6 @@ $closing_balance = $opening_balance + $total_debit - $total_credit;
     }
     ?>
     
-    <!-- Print Button outside container -->
-    <div class="text-center no-print" style="margin: 15px auto;">
-        <button onclick="window.print()" class="btn btn-sm btn-danger">🖨️ Print Ledger</button>
-    </div>
-    
     <!-- Compact Print Layout -->
     <div class="ledger-container">
         <table width="100%" border="0" cellspacing="0" cellpadding="0" class="company-header">
