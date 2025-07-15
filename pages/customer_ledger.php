@@ -15,6 +15,9 @@ $filter_gst = isset($_GET['gst_filter']) ? $_GET['gst_filter'] : 'all'; // Optio
 // Get all customers for the filter dropdown
 $customers = $conn->query("SELECT id, name, CONCAT(COALESCE(prefix, ''), ' ', name) AS display_name FROM customers ORDER BY name");
 
+// Fetch company profile for print header/footer
+$company = $conn->query("SELECT * FROM company_profile LIMIT 1")->fetch_assoc();
+
 // Function to clean numeric values (similar to gst_report.php)
 function clean_number($value) {
     if (is_null($value) || $value === '') {
@@ -41,14 +44,13 @@ $opening_balance = 0;
 $customer_name = "";
 
 if ($filter_customer) {
-    // Get customer details
-    $customer_stmt = $conn->prepare("SELECT CONCAT(COALESCE(prefix, ''), ' ', name) AS display_name FROM customers WHERE id = ?");
-    $customer_stmt->bind_param("i", $filter_customer);
+    // Get the selected customer's details
+    $customer_stmt = $conn->prepare("SELECT * FROM customers WHERE id = ?");
+    $customer_stmt->bind_param('i', $filter_customer);
     $customer_stmt->execute();
     $customer_result = $customer_stmt->get_result();
-    if ($customer_data = $customer_result->fetch_assoc()) {
-        $customer_name = $customer_data['display_name'];
-    }
+    $customer = $customer_result->fetch_assoc();
+    $customer_name = $customer ? $customer['name'] : 'Unknown';
     $customer_stmt->close();
     
     // Calculate opening balance (all transactions before from_date)
@@ -199,53 +201,108 @@ $closing_balance = $opening_balance + $total_debit - $total_credit;
     
     <!-- Print-specific styles -->
     <style>
-        @media print {
-            /* Hide everything by default */
-            #layoutSidenav_nav, #layoutSidenav_content > nav, .card-header, .no-print, 
-            .dataTables_length, .dataTables_filter, .dataTables_info, .dataTables_paginate {
-                display: none !important;
-            }
-            
-            .container-fluid, .card, .card-body, .table {
-                padding: 0 !important;
-                margin: 0 !important;
-                border: none !important;
-                width: 100% !important;
-            }
-            
-            .table {
-                font-size: 11px !important;
-            }
-            
-            @page {
-                size: landscape;
-                margin: 1cm;
-            }
-            
-            body {
-                padding: 15px !important;
-            }
-            
-            h1 {
-                font-size: 18px !important;
-                margin-bottom: 10px !important;
-            }
-            
-            /* Add customer name and date range to top of printed page */
-            .print-header {
-                display: block !important;
-                font-size: 14px;
-                margin-bottom: 10px;
-            }
-            
-            .print-header h2 {
-                font-size: 16px !important;
-                margin: 0 !important;
-            }
+        body {
+            font-family: 'Trebuchet MS', sans-serif;
+            font-size: 12px;
+            color: #000;
+            background: #fff;
+        }
+        
+        .ledger-container {
+            width: 21cm;
+            min-height: 29.7cm;
+            margin: auto;
+            padding: 20px;
+            background: #fff;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+        
+        /* Table styling with page break control */
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+            page-break-inside: auto;
+        }
+        
+        .table thead {
+            display: table-header-group;
+        }
+        
+        .table tbody {
+            page-break-inside: avoid;
+        }
+        
+        .table tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+        }
+        
+        .text-end { text-align: right; }
+        
+        hr.divider {
+            border: none;
+            border-top: 2px solid #000;
+            margin: 15px 0;
+        }
+        
+        /* Page break control */
+        .page-break {
+            page-break-after: always;
+        }
+        
+        /* Avoid breaking these elements across pages */
+        .no-break {
+            page-break-inside: avoid;
         }
         
         .print-header {
             display: none;
+        }
+        
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            
+            .ledger-container, .ledger-container * {
+                visibility: visible;
+            }
+            
+            .ledger-container {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 21cm;
+                height: auto; /* Allow height to adjust based on content */
+                margin: 0;
+                padding: 1cm;
+                box-sizing: border-box;
+                border: none;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+            
+            /* Ensure proper page breaks */
+            .table { page-break-inside: auto; }
+            .table thead { display: table-header-group; }
+            tr { page-break-inside: avoid; }
+            
+            /* Print header styling */
+            .print-header {
+                display: block !important;
+                text-align: center;
+                margin-bottom: 20px;
+            }
+            
+            /* A4 page size */
+            @page {
+                size: A4 portrait;
+                margin: 1.5cm 0.5cm 0.5cm 0.5cm;
+            }
         }
     </style>
 
@@ -286,39 +343,90 @@ $closing_balance = $opening_balance + $total_debit - $total_credit;
 
     <!-- Print header (hidden until print) -->
     <div class="print-header">
-        <h2>Customer Ledger: <?= htmlspecialchars($customer_name) ?></h2>
-        <p>Period: <?= date('d M Y', strtotime($from_date)) ?> to <?= date('d M Y', strtotime($to_date)) ?></p>
+    </div>
+    
+    <!-- Print Button outside container -->
+    <div class="text-center no-print" style="margin: 15px auto;">
+        <button onclick="window.print()" class="btn btn-sm btn-danger">🖨️ Print Ledger</button>
     </div>
     
     <?php if ($filter_customer): ?>
-    <!-- Ledger Table -->
-    <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <div>
-                <i class="fas fa-table me-1"></i>
-                <?php 
-                $filter_text = '';
-                if ($filter_gst === 'with_gst') {
-                    $filter_text = '(GST Invoices)';
-                } else if ($filter_gst === 'without_gst') {
-                    $filter_text = '(Non-GST Invoices)';
-                }
-                ?>
-                Ledger for <?= htmlspecialchars($customer_name) ?> <?= $filter_text ?>
-            </div>
-            <div class="no-print">
-                <button onclick="window.print()" class="btn btn-sm btn-primary">🖨️ Print Ledger</button>
-            </div>
+    <!-- Define filter text based on GST filter -->
+    <?php
+    $filter_text = '';
+    if ($filter_gst === 'with_gst') {
+        $filter_text = '(GST Invoices)';
+    } else if ($filter_gst === 'without_gst') {
+        $filter_text = '(Non-GST Invoices)';
+    }
+    ?>
+    
+    <!-- Ledger Container for Print -->
+    <div class="ledger-container">
+        <!-- Print header with company logo and info -->
+        <div style="margin-bottom: 20px;">
+            <table width="100%">
+                <tr>
+                    <!-- Left: Logo -->
+                    <td width="20%" style="text-align: center; vertical-align: middle;">
+                        <?php if (!empty($company['logo'])): ?>
+                            <img src="../uploads/<?= $company['logo'] ?>" style="max-height: 80px; max-width: 100%;">
+                        <?php endif; ?>
+                    </td>
+                    <!-- Right: Company Info -->
+                    <td width="80%" style="text-align: center; vertical-align: middle;">
+                        <h2 style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">
+                            <?= $company['name'] ?? 'Company Name' ?>
+                        </h2>
+                        <div style="font-size: 14px; margin-bottom: 5px;">
+                            <?= $company['address'] ?? 'Company Address' ?>
+                        </div>
+                        <div style="font-size: 14px; margin-bottom: 5px;">
+                            <?= $company['phone'] ?? 'Phone' ?> | <?= $company['email'] ?? 'Email' ?>
+                        </div>
+                        <div style="font-size: 14px;">
+                            GSTIN: <?= $company['gstin'] ?? 'N/A' ?>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <hr class="divider" style="margin-bottom: 10px;">
+            <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 0; text-align: center;">
+                Customer Ledger Statement <?= $filter_text ?>
+            </h3>
         </div>
-        <div class="card-body">
-            <table class="table table-bordered table-striped">
+        
+        <!-- Customer Details -->
+        <div style="margin-bottom: 15px;">
+            <table width="100%">
+                <tr>
+                    <td width="50%" style="vertical-align: top;">
+                        <div style="font-weight: bold;">Customer Details:</div>
+                        <div><strong><?= htmlspecialchars($customer_name) ?></strong></div>
+                        <div>GSTIN: <?= htmlspecialchars($customer['gstin'] ?? 'N/A') ?></div>
+                        <div>Phone: <?= htmlspecialchars($customer['mobile'] ?? 'N/A') ?></div>
+                    </td>
+                    <td width="50%" style="vertical-align: top; text-align: right;">
+                        <div>Report Date: <?= date('d-M-Y') ?></div>
+                        <div>Period: <?= date('d-M-Y', strtotime($from_date)) ?> to <?= date('d-M-Y', strtotime($to_date)) ?></div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        
+        <hr class="divider" style="margin-bottom: 10px;">
+        
+        <!-- Ledger Table -->
+        <?php if (count($ledger_entries) > 0): ?>
+        <div class="table-responsive">
+            <table class="table table-bordered" id="ledgerTable">
                 <thead>
                     <tr>
                         <th>Date</th>
-                        <th>Particular</th>
-                        <th class="text-end">Debit (<?= CURRENCY_SYMBOL ?>)</th>
-                        <th class="text-end">Credit (<?= CURRENCY_SYMBOL ?>)</th>
-                        <th class="text-end">Balance (<?= CURRENCY_SYMBOL ?>)</th>
+                        <th>Particulars</th>
+                        <th class="text-end">Debit (₹)</th>
+                        <th class="text-end">Credit (₹)</th>
+                        <th class="text-end">Balance (₹)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -365,8 +473,35 @@ $closing_balance = $opening_balance + $total_debit - $total_credit;
                     </tr>
                 </tbody>
             </table>
+            
+            <!-- Additional notes and footer information -->
+            <div style="margin-top: 30px;">
+                <table width="100%" style="margin-top: 20px;">
+                    <tr>
+                        <!-- Company Banking Details -->
+                        <td width="35%" style="text-align: left; vertical-align: top; font-size: 11px;">
+                            <strong>Payment Account Details:</strong><br>
+                            A/C Name: <?= $company['acc_name'] ?? '---' ?><br>
+                            A/C Number: <?= $company['acc_number'] ?? '---' ?><br>
+                            IFS Code: <?= $company['ifsc_code'] ?? '---' ?><br>
+                            Branch: <?= $company['branch'] ?? '---' ?><br>
+                            Bank Name: <?= $company['bank_name'] ?? '---' ?><br>
+                            Company PAN#: <?= $company['pan_number'] ?? '---' ?>
+                        </td>
+                
+                        <!-- Right: Declaration + Sign -->
+                        <td width="65%" style="text-align: right; vertical-align: top; font-size: 11px;">
+                            <p style="margin-top: 5px; font-weight: bold;">For <?= $company['name'] ?? 'Company Name' ?><br><br><br>Authorized Signatory</p>
+                        </td>
+                    </tr>
+                </table>
+                <hr class="divider">
+                <p class="text-center" style="font-size:9px; color:#555; margin-top:5px">
+                    (This is a system generated ledger statement)
+                </p>
+            </div>
+        <?php endif; ?>
         </div>
-    </div>
     <?php else: ?>
     <div class="alert alert-info">
         <i class="fas fa-info-circle me-2"></i> Please select a customer to view their ledger.
