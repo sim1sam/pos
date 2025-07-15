@@ -210,7 +210,6 @@ $closing_balance = $opening_balance + $total_debit - $total_credit;
         
         .ledger-container {
             width: 21cm;
-            min-height: 29.7cm;
             margin: auto;
             padding: 20px;
             background: #fff;
@@ -274,12 +273,21 @@ $closing_balance = $opening_balance + $total_debit - $total_credit;
                 position: absolute;
                 left: 0;
                 top: 0;
-                width: 21cm;
+                width: 100%;
                 height: auto; /* Allow height to adjust based on content */
                 margin: 0;
-                padding: 1cm;
+                padding: 0.5cm;
                 box-sizing: border-box;
                 border: none;
+            }
+            
+            .ledger-header {
+                position: relative;
+                top: 0;
+            }
+            
+            .ledger-content {
+                margin-top: 0;
             }
             
             .no-print {
@@ -287,21 +295,23 @@ $closing_balance = $opening_balance + $total_debit - $total_credit;
             }
             
             /* Ensure proper page breaks */
-            .table { page-break-inside: auto; }
-            .table thead { display: table-header-group; }
-            tr { page-break-inside: avoid; }
-            
-            /* Print header styling */
-            .print-header {
-                display: block !important;
-                text-align: center;
-                margin-bottom: 20px;
+            .table { 
+                page-break-inside: auto; 
+                margin-top: 0;
             }
             
-            /* A4 page size */
+            .table thead { 
+                display: table-header-group;
+            }
+            
+            tr { 
+                page-break-inside: avoid; 
+            }
+            
+            /* A4 page size with minimal margins */
             @page {
                 size: A4 portrait;
-                margin: 1.5cm 0.5cm 0.5cm 0.5cm;
+                margin: 0.5cm;
             }
         }
     </style>
@@ -364,8 +374,8 @@ $closing_balance = $opening_balance + $total_debit - $total_credit;
     <!-- Ledger Container for Print -->
     <div class="ledger-container">
         <!-- Print header with company logo and info -->
-        <div style="margin-bottom: 20px;">
-            <table width="100%">
+        <div class="ledger-header">
+            <table width="100%" border="0" cellspacing="0" cellpadding="0">
                 <tr>
                     <!-- Left: Logo -->
                     <td width="20%" style="text-align: center; vertical-align: middle;">
@@ -390,36 +400,35 @@ $closing_balance = $opening_balance + $total_debit - $total_credit;
                     </td>
                 </tr>
             </table>
-            <hr class="divider" style="margin-bottom: 10px;">
-            <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 0; text-align: center;">
+            <hr class="divider" style="margin: 10px 0;">
+            <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px; text-align: center;">
                 Customer Ledger Statement <?= $filter_text ?>
             </h3>
         </div>
         
-        <!-- Customer Details -->
-        <div style="margin-bottom: 15px;">
-            <table width="100%">
+        <!-- Customer Details and Ledger Table in same flow -->
+        <div class="ledger-content">
+            <!-- Customer Details -->
+            <table width="100%" cellspacing="0" cellpadding="5" style="margin-bottom: 10px;">
                 <tr>
-                    <td width="50%" style="vertical-align: top;">
+                    <td width="60%" style="vertical-align: top;">
                         <div style="font-weight: bold;">Customer Details:</div>
                         <div><strong><?= htmlspecialchars($customer_name) ?></strong></div>
                         <div>GSTIN: <?= htmlspecialchars($customer['gstin'] ?? 'N/A') ?></div>
                         <div>Phone: <?= htmlspecialchars($customer['mobile'] ?? 'N/A') ?></div>
                     </td>
-                    <td width="50%" style="vertical-align: top; text-align: right;">
+                    <td width="40%" style="vertical-align: top; text-align: right;">
                         <div>Report Date: <?= date('d-M-Y') ?></div>
                         <div>Period: <?= date('d-M-Y', strtotime($from_date)) ?> to <?= date('d-M-Y', strtotime($to_date)) ?></div>
                     </td>
                 </tr>
             </table>
-        </div>
-        
-        <hr class="divider" style="margin-bottom: 10px;">
-        
-        <!-- Ledger Table -->
-        <?php if (count($ledger_entries) > 0): ?>
-        <div class="table-responsive">
-            <table class="table table-bordered" id="ledgerTable">
+            
+            <hr style="border-top: 1px solid #ddd; margin: 5px 0;">
+            
+            <!-- Ledger Table -->
+            <?php if (count($ledger_entries) > 0): ?>
+            <table class="table table-bordered" id="ledgerTable" cellspacing="0" cellpadding="5" style="margin-top: 5px;">
                 <thead>
                     <tr>
                         <th>Date</th>
@@ -474,12 +483,12 @@ $closing_balance = $opening_balance + $total_debit - $total_credit;
                 </tbody>
             </table>
             
-            <!-- Additional notes and footer information -->
-            <div style="margin-top: 30px;">
-                <table width="100%" style="margin-top: 20px;">
+            <!-- Footer with banking details - positioned at bottom -->
+            <div style="margin-top: 10px;" class="no-break">
+                <table width="100%" cellspacing="0" cellpadding="3" style="margin-top: 10px;">
                     <tr>
                         <!-- Company Banking Details -->
-                        <td width="35%" style="text-align: left; vertical-align: top; font-size: 11px;">
+                        <td width="50%" style="text-align: left; vertical-align: top; font-size: 11px;">
                             <strong>Payment Account Details:</strong><br>
                             A/C Name: <?= $company['acc_name'] ?? '---' ?><br>
                             A/C Number: <?= $company['acc_number'] ?? '---' ?><br>
@@ -490,12 +499,13 @@ $closing_balance = $opening_balance + $total_debit - $total_credit;
                         </td>
                 
                         <!-- Right: Declaration + Sign -->
-                        <td width="65%" style="text-align: right; vertical-align: top; font-size: 11px;">
-                            <p style="margin-top: 5px; font-weight: bold;">For <?= $company['name'] ?? 'Company Name' ?><br><br><br>Authorized Signatory</p>
+                        <td width="50%" style="text-align: right; vertical-align: bottom; font-size: 11px;">
+                            <p style="margin-top: 20px; font-weight: bold;">For <?= $company['name'] ?? 'Company Name' ?></p>
+                            <p style="margin-top: 30px;">Authorized Signatory</p>
                         </td>
                     </tr>
                 </table>
-                <hr class="divider">
+                <hr style="border-top: 1px solid #000; margin: 10px 0;">
                 <p class="text-center" style="font-size:9px; color:#555; margin-top:5px">
                     (This is a system generated ledger statement)
                 </p>
