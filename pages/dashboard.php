@@ -41,7 +41,7 @@ $due_amount = $total_invoice - $total_payment;
 <body>
 <div class="container py-5">
   <div class="row g-4">
-    <div class="col-md-4">
+    <div class="col-md-3">
       <a href="<?= BASE_URL ?>/pages/invoice_create.php" class="text-decoration-none text-dark">
         <div class="card card-box p-4 h-100">
           <div class="card-icon">🧾</div>
@@ -50,7 +50,7 @@ $due_amount = $total_invoice - $total_payment;
         </div>
       </a>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
       <a href="<?= BASE_URL ?>/pages/invoice_all.php" class="text-decoration-none text-dark">
         <div class="card card-box p-4 h-100">
           <div class="card-icon">📁</div>
@@ -59,7 +59,7 @@ $due_amount = $total_invoice - $total_payment;
         </div>
       </a>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
       <a href="<?= BASE_URL ?>/pages/customer_dashboard.php" class="text-decoration-none text-dark">
         <div class="card card-box p-4 h-100">
           <div class="card-icon">👥</div>
@@ -68,30 +68,46 @@ $due_amount = $total_invoice - $total_payment;
         </div>
       </a>
     </div>
+    <div class="col-md-3">
+      <a href="<?= BASE_URL ?>/pages/customer_ledger.php" class="text-decoration-none text-dark">
+        <div class="card card-box p-4 h-100">
+          <div class="card-icon">📒</div>
+          <h5>Customer Ledger</h5>
+          <p class="text-muted mb-0">Track customer transactions</p>
+        </div>
+      </a>
+    </div>
 
-    <div class="col-md-4">
+    <div class="col-md-3">
       <div class="card card-box p-4 h-100">
         <div class="card-icon text-primary">💰</div>
         <h5>Total Invoice Amount</h5>
         <p class="text-muted">₹<?= number_format($total_invoice, 2) ?></p>
       </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
       <div class="card card-box p-4 h-100">
         <div class="card-icon text-success">💵</div>
         <h5>Total Payment Received</h5>
         <p class="text-muted">₹<?= number_format($total_payment, 2) ?></p>
       </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
       <div class="card card-box p-4 h-100">
         <div class="card-icon text-danger">🧮</div>
         <h5>Total Due Amount</h5>
         <p class="text-muted">₹<?= number_format($due_amount, 2) ?></p>
       </div>
     </div>
+    <div class="col-md-3">
+      <div class="card card-box p-4 h-100">
+        <div class="card-icon text-info">📊</div>
+        <h5>GST Report</h5>
+        <p class="text-muted"><a href="<?= BASE_URL ?>/pages/gst_report.php" class="stretched-link text-decoration-none text-muted">View GST report</a></p>
+      </div>
+    </div>
 
-    <div class="col-md-4">
+    <div class="col-md-3">
       <a href="<?= BASE_URL ?>/pages/payment_add.php" class="text-decoration-none text-dark">
         <div class="card card-box p-4 h-100">
           <div class="card-icon">➕</div>
@@ -100,7 +116,16 @@ $due_amount = $total_invoice - $total_payment;
         </div>
       </a>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
+      <a href="<?= BASE_URL ?>/pages/payments.php" class="text-decoration-none text-dark">
+        <div class="card card-box p-4 h-100">
+          <div class="card-icon">💳</div>
+          <h5>Payments</h5>
+          <p class="text-muted mb-0">View all payments</p>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-3">
       <a href="<?= BASE_URL ?>/pages/settings.php" class="text-decoration-none text-dark">
         <div class="card card-box p-4 h-100">
           <div class="card-icon">⚙️</div>
@@ -109,7 +134,7 @@ $due_amount = $total_invoice - $total_payment;
         </div>
       </a>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
       <a href="<?= BASE_URL ?>/logout.php" class="text-decoration-none text-dark">
         <div class="card card-box p-4 h-100">
           <div class="card-icon">🚪</div>
