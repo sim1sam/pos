@@ -260,8 +260,8 @@ $closing_balance = $opening_balance + $total_debit - $total_credit;
             html, body {
                 width: 210mm;
                 height: 297mm;
-                margin: 0;
-                padding: 0;
+                margin: 5mm !important;
+                padding: 0 !important;
             }
             
             body * {
@@ -288,9 +288,49 @@ $closing_balance = $opening_balance + $total_debit - $total_credit;
                 display: none !important;
             }
             
+            .page {
+                page-break-after: always;
+            }
+            .no-break {
+                page-break-inside: avoid;
+            }
+            .company-header {
+                margin-bottom: 0;
+            }
+            .ledger-content {
+                display: block;
+            }
+            tr {
+                page-break-inside: avoid;
+            }
+            /* Repeat table headers on each page */
+            thead {
+                display: table-header-group;
+            }
+            tfoot {
+                display: table-footer-group;
+            }
+            table {
+                width: 100%;
+                page-break-inside: auto;
+            }
+            /* Add page number */
             @page {
-                size: A4 portrait;
                 margin: 5mm;
+                size: A4;
+                counter-increment: page;
+            }
+            .page-number:after {
+                content: counter(page);
+            }
+            /* Add table header to each page */
+            thead tr {
+                background-color: #f5f5f5;
+                font-weight: bold;
+            }
+            /* Fix for Firefox and Chrome differences */
+            .table {
+                border-collapse: collapse;
             }
         }
     </style>
@@ -396,16 +436,16 @@ $closing_balance = $opening_balance + $total_debit - $total_credit;
             
             <hr style="border-top: 1px solid #ddd; margin: 2px 0;">
             
-            <!-- Ledger Table - Compact -->
+            <!-- Ledger Table with Multi-Page Support -->
             <?php if (count($ledger_entries) > 0): ?>
-            <table class="table" cellspacing="0" cellpadding="3" style="margin-top: 2px; font-size: 10px;">
+            <table class="table" cellspacing="0" cellpadding="3" style="margin-top: 2px; font-size: 10px; border-collapse: collapse;">
                 <thead>
                     <tr style="background-color: #f5f5f5;">
-                        <th style="width: 15%;">Date</th>
-                        <th style="width: 35%;">Particulars</th>
-                        <th class="text-end" style="width: 15%;">Debit (₹)</th>
-                        <th class="text-end" style="width: 15%;">Credit (₹)</th>
-                        <th class="text-end" style="width: 20%;">Balance (₹)</th>
+                        <th style="width: 15%; border-bottom: 1px solid #ddd;">Date</th>
+                        <th style="width: 35%; border-bottom: 1px solid #ddd;">Particulars</th>
+                        <th class="text-end" style="width: 15%; border-bottom: 1px solid #ddd;">Debit (₹)</th>
+                        <th class="text-end" style="width: 15%; border-bottom: 1px solid #ddd;">Credit (₹)</th>
+                        <th class="text-end" style="width: 20%; border-bottom: 1px solid #ddd;">Balance (₹)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -453,6 +493,15 @@ $closing_balance = $opening_balance + $total_debit - $total_credit;
                 </tbody>
             </table>
             
+            <!-- Table Footer (will repeat on each page) -->
+            <tfoot>
+                <tr>
+                    <td colspan="5">
+                        <div style="height: 5px;"></div>
+                    </td>
+                </tr>
+            </tfoot>
+            
             <!-- Compact footer with banking details -->
             <div style="margin-top: 5px;">
                 <hr style="border-top: 1px solid #000; margin: 5px 0;">
@@ -476,7 +525,7 @@ $closing_balance = $opening_balance + $total_debit - $total_credit;
                     </tr>
                 </table>
                 <p class="text-center" style="font-size:8px; color:#555; margin-top:2px">
-                    (This is a system generated ledger statement)
+                    (This is a system generated ledger statement) <span class="page-number">Page </span>
                 </p>
             </div>
         <?php endif; ?>
