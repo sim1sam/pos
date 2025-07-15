@@ -507,20 +507,14 @@ $closing_balance = $opening_balance + $total_debit - $total_credit;
                 <hr style="border-top: 1px solid #000; margin: 5px 0;">
                 <table width="100%" cellspacing="0" cellpadding="2" style="margin-top: 5px;">
                     <tr>
-                        <!-- Banking Details - Left column -->
-                        <td width="60%" style="text-align: left; vertical-align: top; font-size: 9px;">
-                            <strong>Payment Account Details:</strong>
-                            A/C Name: <?= $company['acc_name'] ?? '---' ?> | 
-                            A/C #: <?= $company['acc_number'] ?? '---' ?> | 
-                            IFSC: <?= $company['ifsc_code'] ?? '---' ?><br>
-                            Branch: <?= $company['branch'] ?? '---' ?> | 
-                            Bank: <?= $company['bank_name'] ?? '---' ?> | 
-                            PAN#: <?= $company['pan_number'] ?? '---' ?>
+                        <!-- Left column - Company Name -->
+                        <td width="60%" style="text-align: left; vertical-align: bottom; font-size: 9px;">
+                            <p style="margin: 5px 0 20px 0;">For <?= $company['name'] ?? 'Wise Dynamic Private Limited' ?></p>
                         </td>
                 
                         <!-- Signature - Right column -->
                         <td width="40%" style="text-align: right; vertical-align: bottom; font-size: 9px;">
-                            <p style="margin: 5px 0 20px 0;">For <?= $company['name'] ?? 'Company Name' ?><br>Authorized Signatory</p>
+                            <p style="margin: 5px 0 20px 0;">Authorized Signatory</p>
                         </td>
                     </tr>
                 </table>
