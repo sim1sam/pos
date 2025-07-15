@@ -694,7 +694,7 @@ $total_invoices = count($invoices_data);
         <div class="row mb-3 company-header">
             <div class="col-6">
                 <?php if (!empty($company['logo'])): ?>
-                <img src="<?= htmlspecialchars($company['logo']) ?>" alt="Company Logo" style="max-height: 60px; max-width: 200px;">
+                <img src="../uploads/<?= htmlspecialchars($company['logo']) ?>" alt="Company Logo" style="max-height: 60px; max-width: 200px;">
                 <?php endif; ?>
                 <h3 style="margin: 5px 0; font-size: 16px;"><?= htmlspecialchars($company['name'] ?? '') ?></h3>
                 <p style="margin: 0; font-size: 11px;"><?= nl2br(htmlspecialchars($company['address'] ?? '')) ?></p>
