@@ -206,15 +206,25 @@ $closing_balance = $opening_balance + $total_debit - $total_credit;
             font-size: 12px;
             color: #000;
             background: #fff;
+            margin: 0;
+            padding: 0;
         }
         
         .ledger-container {
-            width: 21cm;
+            width: 100%;
+            max-width: 21cm;
             margin: auto;
-            padding: 20px;
+            padding: 10px;
             background: #fff;
-            border: 1px solid #ccc;
             box-sizing: border-box;
+        }
+        
+        .company-header {
+            margin-bottom: 5px;
+        }
+        
+        .customer-details {
+            margin-bottom: 5px;
         }
         
         /* Table styling with page break control */
@@ -229,38 +239,31 @@ $closing_balance = $opening_balance + $total_debit - $total_credit;
             display: table-header-group;
         }
         
-        .table tbody {
+        .table tr {
             page-break-inside: avoid;
         }
         
-        .table tr {
-            page-break-inside: avoid;
-            page-break-after: auto;
+        .table th, .table td {
+            border: 1px solid #ddd;
+            padding: 3px;
         }
         
         .text-end { text-align: right; }
         
         hr.divider {
             border: none;
-            border-top: 2px solid #000;
-            margin: 15px 0;
-        }
-        
-        /* Page break control */
-        .page-break {
-            page-break-after: always;
-        }
-        
-        /* Avoid breaking these elements across pages */
-        .no-break {
-            page-break-inside: avoid;
-        }
-        
-        .print-header {
-            display: none;
+            border-top: 1px solid #000;
+            margin: 5px 0;
         }
         
         @media print {
+            html, body {
+                width: 210mm;
+                height: 297mm;
+                margin: 0;
+                padding: 0;
+            }
+            
             body * {
                 visibility: hidden;
             }
@@ -274,44 +277,20 @@ $closing_balance = $opening_balance + $total_debit - $total_credit;
                 left: 0;
                 top: 0;
                 width: 100%;
-                height: auto; /* Allow height to adjust based on content */
+                height: auto;
                 margin: 0;
-                padding: 0.5cm;
+                padding: 5mm;
                 box-sizing: border-box;
                 border: none;
-            }
-            
-            .ledger-header {
-                position: relative;
-                top: 0;
-            }
-            
-            .ledger-content {
-                margin-top: 0;
             }
             
             .no-print {
                 display: none !important;
             }
             
-            /* Ensure proper page breaks */
-            .table { 
-                page-break-inside: auto; 
-                margin-top: 0;
-            }
-            
-            .table thead { 
-                display: table-header-group;
-            }
-            
-            tr { 
-                page-break-inside: avoid; 
-            }
-            
-            /* A4 page size with minimal margins */
             @page {
                 size: A4 portrait;
-                margin: 0.5cm;
+                margin: 5mm;
             }
         }
     </style>
@@ -371,80 +350,76 @@ $closing_balance = $opening_balance + $total_debit - $total_credit;
     }
     ?>
     
-    <!-- Ledger Container for Print -->
+    <!-- Print Button outside container -->
+    <div class="text-center no-print" style="margin: 15px auto;">
+        <button onclick="window.print()" class="btn btn-sm btn-danger">🖨️ Print Ledger</button>
+    </div>
+    
+    <!-- Compact Print Layout -->
     <div class="ledger-container">
-        <!-- Print header with company logo and info -->
-        <div class="ledger-header">
-            <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                <tr>
-                    <!-- Left: Logo -->
-                    <td width="20%" style="text-align: center; vertical-align: middle;">
-                        <?php if (!empty($company['logo'])): ?>
-                            <img src="../uploads/<?= $company['logo'] ?>" style="max-height: 80px; max-width: 100%;">
-                        <?php endif; ?>
-                    </td>
-                    <!-- Right: Company Info -->
-                    <td width="80%" style="text-align: center; vertical-align: middle;">
-                        <h2 style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">
-                            <?= $company['name'] ?? 'Company Name' ?>
-                        </h2>
-                        <div style="font-size: 14px; margin-bottom: 5px;">
-                            <?= $company['address'] ?? 'Company Address' ?>
-                        </div>
-                        <div style="font-size: 14px; margin-bottom: 5px;">
-                            <?= $company['phone'] ?? 'Phone' ?> | <?= $company['email'] ?? 'Email' ?>
-                        </div>
-                        <div style="font-size: 14px;">
-                            GSTIN: <?= $company['gstin'] ?? 'N/A' ?>
-                        </div>
-                    </td>
-                </tr>
-            </table>
-            <hr class="divider" style="margin: 10px 0;">
-            <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px; text-align: center;">
-                Customer Ledger Statement <?= $filter_text ?>
-            </h3>
-        </div>
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" class="company-header">
+            <tr>
+                <!-- Left: Logo -->
+                <td width="20%" style="text-align: center; vertical-align: middle;">
+                    <?php if (!empty($company['logo'])): ?>
+                        <img src="../uploads/<?= $company['logo'] ?>" style="max-height: 60px; max-width: 100%;">
+                    <?php endif; ?>
+                </td>
+                <!-- Right: Company Info -->
+                <td width="80%" style="text-align: center; vertical-align: middle;">
+                    <h2 style="font-size: 16px; font-weight: bold; margin-bottom: 2px;">
+                        <?= $company['name'] ?? 'Company Name' ?>
+                    </h2>
+                    <div style="font-size: 12px; margin-bottom: 2px;">
+                        <?= $company['address'] ?? 'Company Address' ?>
+                    </div>
+                    <div style="font-size: 12px; margin-bottom: 2px;">
+                        <?= $company['phone'] ?? 'Phone' ?> | <?= $company['email'] ?? 'Email' ?> | GSTIN: <?= $company['gstin'] ?? 'N/A' ?>
+                    </div>
+                </td>
+            </tr>
+        </table>
+        <hr class="divider">
+        <h3 style="font-size: 14px; font-weight: bold; margin: 5px 0; text-align: center;">
+            Customer Ledger Statement <?= $filter_text ?>
+        </h3>
         
-        <!-- Customer Details and Ledger Table in same flow -->
-        <div class="ledger-content">
-            <!-- Customer Details -->
-            <table width="100%" cellspacing="0" cellpadding="5" style="margin-bottom: 10px;">
-                <tr>
-                    <td width="60%" style="vertical-align: top;">
-                        <div style="font-weight: bold;">Customer Details:</div>
-                        <div><strong><?= htmlspecialchars($customer_name) ?></strong></div>
-                        <div>GSTIN: <?= htmlspecialchars($customer['gstin'] ?? 'N/A') ?></div>
-                        <div>Phone: <?= htmlspecialchars($customer['mobile'] ?? 'N/A') ?></div>
-                    </td>
-                    <td width="40%" style="vertical-align: top; text-align: right;">
-                        <div>Report Date: <?= date('d-M-Y') ?></div>
-                        <div>Period: <?= date('d-M-Y', strtotime($from_date)) ?> to <?= date('d-M-Y', strtotime($to_date)) ?></div>
-                    </td>
-                </tr>
-            </table>
+        <!-- Customer Details - Compact -->
+        <table width="100%" cellspacing="0" cellpadding="2" style="margin-bottom: 5px;">
+            <tr>
+                <td width="70%" style="vertical-align: top; font-size: 11px;">
+                    <span style="font-weight: bold;">Customer:</span> <strong><?= htmlspecialchars($customer_name) ?></strong><br>
+                    <span style="font-weight: bold;">GSTIN:</span> <?= htmlspecialchars($customer['gstin'] ?? 'N/A') ?> | 
+                    <span style="font-weight: bold;">Phone:</span> <?= htmlspecialchars($customer['mobile'] ?? 'N/A') ?>
+                </td>
+                <td width="30%" style="vertical-align: top; text-align: right; font-size: 11px;">
+                    <span style="font-weight: bold;">Report Date:</span> <?= date('d-M-Y') ?><br>
+                    <span style="font-weight: bold;">Period:</span> <?= date('d-M-Y', strtotime($from_date)) ?> to <?= date('d-M-Y', strtotime($to_date)) ?>
+                </td>
+            </tr>
+        </table>
             
-            <hr style="border-top: 1px solid #ddd; margin: 5px 0;">
+            <hr style="border-top: 1px solid #ddd; margin: 2px 0;">
             
-            <!-- Ledger Table -->
+            <!-- Ledger Table - Compact -->
             <?php if (count($ledger_entries) > 0): ?>
-            <table class="table table-bordered" id="ledgerTable" cellspacing="0" cellpadding="5" style="margin-top: 5px;">
+            <table class="table" cellspacing="0" cellpadding="3" style="margin-top: 2px; font-size: 10px;">
                 <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Particulars</th>
-                        <th class="text-end">Debit (₹)</th>
-                        <th class="text-end">Credit (₹)</th>
-                        <th class="text-end">Balance (₹)</th>
+                    <tr style="background-color: #f5f5f5;">
+                        <th style="width: 15%;">Date</th>
+                        <th style="width: 35%;">Particulars</th>
+                        <th class="text-end" style="width: 15%;">Debit (₹)</th>
+                        <th class="text-end" style="width: 15%;">Credit (₹)</th>
+                        <th class="text-end" style="width: 20%;">Balance (₹)</th>
                     </tr>
                 </thead>
                 <tbody>
                     <!-- Opening Balance Row -->
-                    <tr class="table-light">
-                        <td><?= date('d M Y', strtotime($from_date)) ?></td>
+                    <tr style="background-color: #f8f8f8;">
+                        <td><?= date('d-m-Y', strtotime($from_date)) ?></td>
                         <td><strong>Opening Balance</strong></td>
-                        <td class="text-end"><?= $opening_balance > 0 ? number_format($opening_balance, 2) : '' ?></td>
-                        <td class="text-end"><?= $opening_balance < 0 ? number_format(abs($opening_balance), 2) : '' ?></td>
+                        <td class="text-end"><?= $opening_balance > 0 ? number_format($opening_balance, 2) : '-' ?></td>
+                        <td class="text-end"><?= $opening_balance < 0 ? number_format(abs($opening_balance), 2) : '-' ?></td>
                         <td class="text-end"><?= $opening_balance >= 0 ? 
                             number_format($opening_balance, 2) . ' Dr' : 
                             number_format(abs($opening_balance), 2) . ' Cr' ?></td>
@@ -459,11 +434,11 @@ $closing_balance = $opening_balance + $total_debit - $total_credit;
                             $running_balance -= $entry['credit'];
                         }
                     ?>
-                    <tr>
-                        <td><?= date('d M Y', strtotime($entry['date'])) ?></td>
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td><?= date('d-m-Y', strtotime($entry['date'])) ?></td>
                         <td><?= htmlspecialchars($entry['particular']) ?></td>
-                        <td class="text-end"><?= $entry['debit'] > 0 ? number_format($entry['debit'], 2) : '' ?></td>
-                        <td class="text-end"><?= $entry['credit'] > 0 ? number_format($entry['credit'], 2) : '' ?></td>
+                        <td class="text-end"><?= $entry['debit'] > 0 ? number_format($entry['debit'], 2) : '-' ?></td>
+                        <td class="text-end"><?= $entry['credit'] > 0 ? number_format($entry['credit'], 2) : '-' ?></td>
                         <td class="text-end"><?= $running_balance >= 0 ? 
                             number_format($running_balance, 2) . ' Dr' : 
                             number_format(abs($running_balance), 2) . ' Cr' ?></td>
@@ -471,42 +446,41 @@ $closing_balance = $opening_balance + $total_debit - $total_credit;
                     <?php endforeach; ?>
                     
                     <!-- Closing Balance Row -->
-                    <tr class="table-light">
-                        <td><?= date('d M Y', strtotime($to_date)) ?></td>
+                    <tr style="background-color: #f8f8f8; font-weight: bold;">
+                        <td><?= date('d-m-Y', strtotime($to_date)) ?></td>
                         <td><strong>Closing Balance</strong></td>
-                        <td class="text-end"><strong><?= number_format($total_debit, 2) ?></strong></td>
-                        <td class="text-end"><strong><?= number_format($total_credit, 2) ?></strong></td>
-                        <td class="text-end"><strong><?= $closing_balance >= 0 ? 
+                        <td class="text-end"><?= number_format($total_debit, 2) ?></td>
+                        <td class="text-end"><?= number_format($total_credit, 2) ?></td>
+                        <td class="text-end"><?= $closing_balance >= 0 ? 
                             number_format($closing_balance, 2) . ' Dr' : 
-                            number_format(abs($closing_balance), 2) . ' Cr' ?></strong></td>
+                            number_format(abs($closing_balance), 2) . ' Cr' ?></td>
                     </tr>
                 </tbody>
             </table>
             
-            <!-- Footer with banking details - positioned at bottom -->
-            <div style="margin-top: 10px;" class="no-break">
-                <table width="100%" cellspacing="0" cellpadding="3" style="margin-top: 10px;">
+            <!-- Compact footer with banking details -->
+            <div style="margin-top: 5px;">
+                <hr style="border-top: 1px solid #000; margin: 5px 0;">
+                <table width="100%" cellspacing="0" cellpadding="2" style="margin-top: 5px;">
                     <tr>
-                        <!-- Company Banking Details -->
-                        <td width="50%" style="text-align: left; vertical-align: top; font-size: 11px;">
-                            <strong>Payment Account Details:</strong><br>
-                            A/C Name: <?= $company['acc_name'] ?? '---' ?><br>
-                            A/C Number: <?= $company['acc_number'] ?? '---' ?><br>
-                            IFS Code: <?= $company['ifsc_code'] ?? '---' ?><br>
-                            Branch: <?= $company['branch'] ?? '---' ?><br>
-                            Bank Name: <?= $company['bank_name'] ?? '---' ?><br>
-                            Company PAN#: <?= $company['pan_number'] ?? '---' ?>
+                        <!-- Banking Details - Left column -->
+                        <td width="60%" style="text-align: left; vertical-align: top; font-size: 9px;">
+                            <strong>Payment Account Details:</strong>
+                            A/C Name: <?= $company['acc_name'] ?? '---' ?> | 
+                            A/C #: <?= $company['acc_number'] ?? '---' ?> | 
+                            IFSC: <?= $company['ifsc_code'] ?? '---' ?><br>
+                            Branch: <?= $company['branch'] ?? '---' ?> | 
+                            Bank: <?= $company['bank_name'] ?? '---' ?> | 
+                            PAN#: <?= $company['pan_number'] ?? '---' ?>
                         </td>
                 
-                        <!-- Right: Declaration + Sign -->
-                        <td width="50%" style="text-align: right; vertical-align: bottom; font-size: 11px;">
-                            <p style="margin-top: 20px; font-weight: bold;">For <?= $company['name'] ?? 'Company Name' ?></p>
-                            <p style="margin-top: 30px;">Authorized Signatory</p>
+                        <!-- Signature - Right column -->
+                        <td width="40%" style="text-align: right; vertical-align: bottom; font-size: 9px;">
+                            <p style="margin: 5px 0 20px 0;">For <?= $company['name'] ?? 'Company Name' ?><br>Authorized Signatory</p>
                         </td>
                     </tr>
                 </table>
-                <hr style="border-top: 1px solid #000; margin: 10px 0;">
-                <p class="text-center" style="font-size:9px; color:#555; margin-top:5px">
+                <p class="text-center" style="font-size:8px; color:#555; margin-top:2px">
                     (This is a system generated ledger statement)
                 </p>
             </div>
