@@ -177,7 +177,12 @@ $total_invoices = count($invoices_data);
     
     <!-- Print-specific styles -->
     <style>
-        @media print {
+.print-container { display: none !important; visibility: hidden !important; position: absolute !important; left: -9999px !important; }
+    /* Make sure print-table is visible and styled when printing */
+    .print-table { visibility: visible !important; display: table !important; width: 100% !important; }
+    .print-table th, .print-table td { border: 1px solid #000 !important; padding: 4px !important; }
+    
+    @media print {
             /* Hide everything by default */
             #layoutSidenav_nav, #layoutSidenav_content > nav, .card-header, .no-print, .dataTables_length, 
             .dataTables_filter, .dataTables_paginate, .pagination, button, .card-footer, .app-footer,
@@ -349,132 +354,214 @@ $total_invoices = count($invoices_data);
     <!-- GST Invoices Table -->
     <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <div>
-                <i class="fas fa-table me-1"></i>
-                GST Invoices
-            </div>
-            <div class="no-print">
-                <button onclick="preparePrint()" class="btn btn-sm btn-primary">🖨️ Print Report</button>
-            </div>
+    <div>
+        <i class="fas fa-table me-1"></i>
+        GST Invoices
+    </div>
+    <!-- Removed duplicate print button here -->
+    <!-- Only the print button above the table remains -->
+
             
             <script>
-                function preparePrint() {
+
+                
+                // Print flag to prevent multiple calls
+                let isPrinting = false;
+                
+                // Consolidated print function
+                function printReport(isHsnSummary = false) {
+                    // Prevent multiple calls
+                    if (isPrinting) return;
+                    isPrinting = true;
+                    
                     // Get the print container element
                     const printContainer = document.querySelector('.print-container');
+                    
+                    // Update the report type text in the header
+                    // Find the report type element by iterating through paragraphs
+                    const paragraphs = printContainer.querySelectorAll('p');
+                    let reportTypeElement = null;
+                    
+                    for (let i = 0; i < paragraphs.length; i++) {
+                        if (paragraphs[i].textContent.includes('Report Type:')) {
+                            reportTypeElement = paragraphs[i];
+                            break;
+                        }
+                    }
+                    
+                    if (reportTypeElement) {
+                        if (isHsnSummary) {
+                            reportTypeElement.innerHTML = '<strong>Report Type:</strong> HSN/SAC Summary';
+                        } else {
+                            reportTypeElement.innerHTML = '<strong>Report Type:</strong> Detailed GST Invoice';
+                        }
+                    }
+                    
+                    // Show/hide appropriate tables based on report type
+                    const tables = printContainer.querySelectorAll('.print-table');
+                    
+                    for (let i = 0; i < tables.length; i++) {
+                        const firstHeader = tables[i].querySelector('thead th:first-child');
+                        const isHsnTable = firstHeader && firstHeader.textContent.trim() === 'HSN/SAC';
+                        
+                        if (isHsnSummary) {
+                            tables[i].style.display = isHsnTable ? 'table' : 'none';
+                        } else {
+                            tables[i].style.display = isHsnTable ? 'none' : 'table';
+                        }
+                    }
                     
                     // Show the print container
                     printContainer.style.display = 'block';
                     printContainer.style.visibility = 'visible';
-                    printContainer.style.position = 'absolute';
+                    printContainer.style.position = 'fixed';
                     printContainer.style.top = '0';
                     printContainer.style.left = '0';
                     printContainer.style.zIndex = '9999';
                     printContainer.style.width = '100%';
+                    printContainer.style.height = 'auto';
+                    printContainer.style.background = '#fff';
                     
-                    // Force landscape mode
+                    // Move print container to the body to avoid inheritance issues
+                    document.body.appendChild(printContainer);
+                    
+                    // Force landscape mode and ensure print container is visible
                     const style = document.createElement('style');
-                    style.innerHTML = '@page { size: landscape !important; } ' +
-                                     '.print-container { display: block !important; visibility: visible !important; } ' +
-                                     'body > *:not(.print-container) { display: none !important; }';
+                    style.innerHTML = '@page { size: landscape !important; margin: 0.5cm; } ' +
+                                     '@media print { ' +
+                                     '  html, body { overflow: visible !important; height: auto !important; } ' +
+                                     '  .print-container { display: block !important; visibility: visible !important; position: absolute !important; left: 0 !important; top: 0 !important; overflow: visible !important; } ' +
+                                     '  .print-container * { visibility: visible !important; } ' +
+                                     '  body > *:not(.print-container) { display: none !important; } ' +
+                                     '  .print-table { width: 100% !important; border-collapse: collapse !important; page-break-inside: auto !important; } ' +
+                                     '  .print-table thead { display: table-header-group; } ' +
+                                     '  .print-table tr { page-break-inside: avoid !important; page-break-after: auto !important; } ' +
+                                     '  .print-table th, .print-table td { border: 1px solid #000 !important; padding: 4px !important; } ' +
+                                     '  @page { margin: 1cm; } ' +
+                                     '  h2.report-title { display: block; text-align: center; font-size: 18px; margin-bottom: 10px; } ' +
+                                     '}';
                     style.id = 'forceLandscape';
                     document.head.appendChild(style);
                     
-                    // Small delay to ensure styles are applied
-                    setTimeout(function() {
-                        // Trigger print
-                        window.print();
+                    // Update the report title based on the report type
+                    const reportTitleElement = printContainer.querySelector('h2');
+                    if (reportTitleElement) {
+                        reportTitleElement.textContent = isHsnSummary ? 'HSN/SAC Summary Report' : 'GST Invoice Report';
+                        reportTitleElement.classList.add('report-title');
+                    }
+                    
+                    // Trigger print
+                    window.print();
+                    
+                    // Reset flag and restore view after print dialog closes
+                    // Note: This will happen whether print is completed or cancelled
+                    window.addEventListener('afterprint', function resetPrintView() {
+                        // Remove this one-time event listener
+                        window.removeEventListener('afterprint', resetPrintView);
                         
-                        // Set a timeout to restore the view after printing
-                        setTimeout(function() {
+                        // Reset printing flag
+                        isPrinting = false;
+                        
+                        // Hide the print container
+                        printContainer.style.display = 'none';
+                        printContainer.style.visibility = 'hidden';
+                        printContainer.style.position = 'absolute';
+                        printContainer.style.left = '-9999px';
+                        
+                        // Remove the temporary style
+                        const landscapeStyle = document.getElementById('forceLandscape');
+                        if (landscapeStyle) landscapeStyle.remove();
+                        
+                        // Return print container to its original position if needed
+                        const originalContainer = document.querySelector('.container-fluid');
+                        if (originalContainer) {
+                            originalContainer.appendChild(printContainer);
+                        }
+                    });
+                    
+                    // Fallback timeout in case afterprint event doesn't fire
+                    // This ensures the print state is always reset, even if the browser doesn't support afterprint
+                    setTimeout(function() {
+                        if (isPrinting) {
+                            console.log('Print timeout reached, resetting print state');
+                            
+                            // Reset printing flag
+                            isPrinting = false;
+                            
                             // Hide the print container
                             printContainer.style.display = 'none';
                             printContainer.style.visibility = 'hidden';
-                            printContainer.style.position = 'static';
+                            printContainer.style.position = 'absolute';
+                            printContainer.style.left = '-9999px';
                             
                             // Remove the temporary style
                             const landscapeStyle = document.getElementById('forceLandscape');
                             if (landscapeStyle) landscapeStyle.remove();
-                        }, 1000);
-                    }, 100);
+                            
+                            // Return print container to its original position if needed
+                            const originalContainer = document.querySelector('.container-fluid');
+                            if (originalContainer) {
+                                originalContainer.appendChild(printContainer);
+                            }
+                        }
+                    }, 5000); // 5 second timeout
                 }
                 
-                // Handle the case when user presses Ctrl+P directly
-                window.addEventListener('beforeprint', function() {
-                    const printContainer = document.querySelector('.print-container');
-                    printContainer.style.display = 'block';
-                    printContainer.style.visibility = 'visible';
-                    printContainer.style.position = 'absolute';
-                    printContainer.style.top = '0';
-                    printContainer.style.left = '0';
-                    printContainer.style.zIndex = '9999';
-                    printContainer.style.width = '100%';
-                    
-                    // Force layout to display print container
-                    document.body.appendChild(printContainer);
-                    
-                    // Create and apply temporary print styles
-                    const tempStyle = document.createElement('style');
-                    tempStyle.id = 'tempPrintStyle';
-                    tempStyle.innerHTML = '@media print { ' +
-                        '.print-container { display: block !important; visibility: visible !important; } ' +
-                        'body > *:not(.print-container) { display: none !important; } ' +
-                        '@page { size: landscape !important; }' +
-                    '}';
-                    document.head.appendChild(tempStyle);
+                // Remove the global beforeprint handler to avoid conflicts
+                window.removeEventListener('beforeprint', function() {
+                    printReport();
                 });
                 
-                // Handle after print to hide the print container
-                window.addEventListener('afterprint', function() {
+                // Remove the global afterprint handler to avoid conflicts
+                window.removeEventListener('afterprint', function() {
                     const printContainer = document.querySelector('.print-container');
                     printContainer.style.display = 'none';
                     printContainer.style.visibility = 'hidden';
-                    
-                    // Remove temporary print style if it exists
-                    const tempStyle = document.getElementById('tempPrintStyle');
-                    if (tempStyle) tempStyle.remove();
+                    printContainer.style.position = 'absolute';
+                    printContainer.style.left = '-9999px';
                 });
             </script>
         </div>
         <div class="card-body">
     <!-- Regular display tables (non-print) -->
     <?php if ($invoices->num_rows > 0 && !$hsn_summary): ?>
-        <div class="table-responsive mt-4 print-section">
-            <table class="table table-bordered table-striped" id="gst-invoices-table">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Invoice #</th>
-                        <th>Customer</th>
-                        <th>HSN/SAC</th>
-                        <th>Description</th>
-                        <th>Rate</th>
-                        <th>Amount</th>
-                        <th>CGST</th>
-                        <th>SGST</th>
-                        <th>IGST</th>
-                        <th>Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php 
-                    // Table will be populated by DataTables jQuery
-                    ?>
-                </tbody>
-            </table>
+        <!-- Single GST Invoices Table with Print Button -->
+        <div class="table-responsive mt-4">
+            <div class="d-flex justify-content-between mb-3">
+                <h4>GST Invoices</h4>
+                <!-- Print button -->
+                <button onclick="printReport()" class="btn btn-primary btn-sm">🖨️ Print Report</button>
+            </div>
+            <div id="single-table-container">
+                <!-- The table will be generated via JavaScript below -->
+            </div>
             
             <script>
                 $(document).ready(function() {
+                    // Initialize DataTable with empty data first
+                    const table = $('#single-table-container').html('<table id="gst-invoices-table" class="table table-bordered table-striped"></table>');
                     $('#gst-invoices-table').DataTable({
-                        "processing": true,
-                        "serverSide": false,
-                        "paging": true,
                         "ordering": true,
-                        "info": true,
                         "searching": true,
+                        "paging": true,
+                        "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                        "info": true,
+                        "columns": [
+                            { "title": "Date" },
+                            { "title": "Invoice #" },
+                            { "title": "Customer" },
+                            { "title": "HSN/SAC" },
+                            { "title": "Description" },
+                            { "title": "Rate" },
+                            { "title": "Amount" },
+                            { "title": "CGST" },
+                            { "title": "SGST" },
+                            { "title": "IGST" },
+                            { "title": "Total" }
+                        ],
                         "data": [
                             <?php
                             $invoices->data_seek(0);
-                            
                             while ($invoice = $invoices->fetch_assoc()):
                                 $details_query = "SELECT 
                                     description,
@@ -488,58 +575,34 @@ $total_invoices = count($invoices_data);
                                     CAST(TRIM(REPLACE(REPLACE(total, '262145 ', ''), '262145', '')) AS DECIMAL(10,2)) as total
                                 FROM invoice_details 
                                 WHERE invoice_id = ?";
-                                
                                 $stmt = $conn->prepare($details_query);
                                 $stmt->bind_param("i", $invoice['id']);
                                 $stmt->execute();
                                 $details = $stmt->get_result();
-                                
                                 if ($details->num_rows > 0):
                                     while ($item = $details->fetch_assoc()):
                                         strip_prefix_from_array($item);
-                                        // Format the date
-                                        $formatted_date = date('d-m-Y', strtotime($invoice['invoice_date']));
-                                        // Format the rate
-                                        $formatted_rate = number_format($item['rate'], 2);
-                                        // Format the amount values with currency symbol
-                                        $formatted_amount = CURRENCY_SYMBOL . ' ' . display_number($item['amount']);
-                                        $formatted_cgst = CURRENCY_SYMBOL . ' ' . display_number($item['cgst_amount']);
-                                        $formatted_sgst = CURRENCY_SYMBOL . ' ' . display_number($item['sgst_amount']);
-                                        $formatted_igst = CURRENCY_SYMBOL . ' ' . display_number($item['igst_amount']);
-                                        $formatted_total = CURRENCY_SYMBOL . ' ' . display_number($item['total']);
                                         
-                                        // Output as JavaScript array
-                                        echo "[\n";
-                                        echo "    \"$formatted_date\",\n";
-                                        echo "    \"" . addslashes($invoice['invoice_no']) . "\",\n";
-                                        echo "    \"" . addslashes($invoice['customer_name']) . "\",\n";
-                                        echo "    \"" . addslashes($item['hsn_sac'] ?? 'N/A') . "\",\n";
-                                        echo "    \"" . addslashes($item['description']) . "\",\n";
-                                        echo "    \"$formatted_rate\",\n";
-                                        echo "    \"$formatted_amount\",\n";
-                                        echo "    \"$formatted_cgst\",\n";
-                                        echo "    \"$formatted_sgst\",\n";
-                                        echo "    \"$formatted_igst\",\n";
-                                        echo "    \"$formatted_total\"\n";
-                                        echo "],\n";
+                                        // Format values for JSON output
+                                        $date = date('d-m-Y', strtotime($invoice['invoice_date']));
+                                        $invoice_no = addslashes($invoice['invoice_no']);
+                                        $customer = addslashes($invoice['customer_name']);
+                                        $hsn_sac = addslashes($item['hsn_sac'] ?? 'N/A');
+                                        $description = addslashes($item['description']);
+                                        $rate = number_format($item['rate'], 2);
+                                        $amount = CURRENCY_SYMBOL . ' ' . display_number($item['amount']);
+                                        $cgst = CURRENCY_SYMBOL . ' ' . display_number($item['cgst_amount']);
+                                        $sgst = CURRENCY_SYMBOL . ' ' . display_number($item['sgst_amount']);
+                                        $igst = CURRENCY_SYMBOL . ' ' . display_number($item['igst_amount']);
+                                        $total = CURRENCY_SYMBOL . ' ' . display_number($item['total']);
+                            ?>
+                            ["<?= $date ?>", "<?= $invoice_no ?>", "<?= $customer ?>", "<?= $hsn_sac ?>", "<?= $description ?>", "<?= $rate ?>", "<?= $amount ?>", "<?= $cgst ?>", "<?= $sgst ?>", "<?= $igst ?>", "<?= $total ?>"],
+                            <?php
                                     endwhile;
                                 endif;
                                 $stmt->close();
                             endwhile;
                             ?>
-                        ],
-                        "columns": [
-                            { "title": "Date" },
-                            { "title": "Invoice #" },
-                            { "title": "Customer" },
-                            { "title": "HSN/SAC" },
-                            { "title": "Description" },
-                            { "title": "Rate" },
-                            { "title": "Amount" },
-                            { "title": "CGST" },
-                            { "title": "SGST" },
-                            { "title": "IGST" },
-                            { "title": "Total" }
                         ]
                     });
                 });
@@ -550,27 +613,99 @@ $total_invoices = count($invoices_data);
         <div class="no-print mb-3">
             <h4 class="mt-3 mb-3">HSN/SAC Summary Report (<?= date('d-m-Y', strtotime($from_date)) ?> to <?= date('d-m-Y', strtotime($to_date)) ?>)</h4>
         </div>
-        <div class="table-responsive print-section">
-            <table class="table table-bordered table-striped" id="hsn-summary-table">
-                <thead>
-                    <tr>
-                        <th>HSN/SAC</th>
-                        <th>Description</th>
-                        <th>QTY</th>
-                        <th>Amount</th>
-                        <th>CGST</th>
-                        <th>SGST</th>
-                        <th>IGST</th>
-                        <th>Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Will be filled by DataTables -->
-                </tbody>
-            </table>
+        <div class="table-responsive print-section" id="hsn-summary-container">
+            <div id="hsn-summary-table-wrapper"></div>
             
             <script>
                 $(document).ready(function() {
+                    // Get HSN summary data
+                    const hsnData = [
+                        <?php
+                        // Query to get HSN/SAC summary
+                        $hsn_query = "SELECT 
+                            id.hsn_sac,
+                            MAX(id.description) as description,
+                            SUM(id.qty) as total_qty,
+                            CAST(TRIM(REPLACE(REPLACE(SUM(id.amount), '262145 ', ''), '262145', '')) AS DECIMAL(10,2)) as total_amount,
+                            CAST(TRIM(REPLACE(REPLACE(SUM(id.cgst_amount), '262145 ', ''), '262145', '')) AS DECIMAL(10,2)) as total_cgst,
+                            CAST(TRIM(REPLACE(REPLACE(SUM(id.sgst_amount), '262145 ', ''), '262145', '')) AS DECIMAL(10,2)) as total_sgst,
+                            CAST(TRIM(REPLACE(REPLACE(SUM(id.igst_amount), '262145 ', ''), '262145', '')) AS DECIMAL(10,2)) as total_igst,
+                            CAST(TRIM(REPLACE(REPLACE(SUM(id.total), '262145 ', ''), '262145', '')) AS DECIMAL(10,2)) as grand_total
+                        FROM 
+                            invoice_details id
+                        JOIN 
+                            invoices i ON id.invoice_id = i.id
+                        WHERE 
+                            i.is_gst_invoice = 1
+                             AND i.invoice_date BETWEEN ? AND ?";
+                         
+                        $params = [$from_date, $to_date];
+                        $types = "ss";
+                         
+                        if ($filter_customer) {
+                            $hsn_query .= " AND i.customer_id = ?";
+                            $params[] = $filter_customer;
+                            $types .= "i";
+                        }
+                        
+                        if ($filter_status) {
+                            $hsn_query .= " AND i.status = ?";
+                            $params[] = $filter_status;
+                            $types .= "s";
+                        }
+                         
+                        $hsn_query .= " GROUP BY id.hsn_sac ORDER BY id.hsn_sac";
+                         
+                        $hsn_stmt = $conn->prepare($hsn_query);
+                        $hsn_stmt->bind_param($types, ...$params);
+                        $hsn_stmt->execute();
+                        $hsn_result = $hsn_stmt->get_result();
+                         
+                        $total_hsn_amount = 0;
+                        $total_hsn_cgst = 0;
+                        $total_hsn_sgst = 0;
+                        $total_hsn_igst = 0;
+                        $total_hsn_grand = 0;
+                         
+                        while ($hsn = $hsn_result->fetch_assoc()):
+                            strip_prefix_from_array($hsn);
+                            
+                            $total_hsn_amount += floatval($hsn['total_amount']);
+                            $total_hsn_cgst += floatval($hsn['total_cgst']);
+                            $total_hsn_sgst += floatval($hsn['total_sgst']);
+                            $total_hsn_igst += floatval($hsn['total_igst']);
+                            $total_hsn_grand += floatval($hsn['grand_total']);
+                            
+                            // Format for DataTable
+                            $formatted_qty = display_number($hsn['total_qty']);
+                            $formatted_amount = CURRENCY_SYMBOL . ' ' . display_number($hsn['total_amount']);
+                            $formatted_cgst = CURRENCY_SYMBOL . ' ' . display_number($hsn['total_cgst']);
+                            $formatted_sgst = CURRENCY_SYMBOL . ' ' . display_number($hsn['total_sgst']);
+                            $formatted_igst = CURRENCY_SYMBOL . ' ' . display_number($hsn['total_igst']);
+                            $formatted_total = CURRENCY_SYMBOL . ' ' . display_number($hsn['grand_total']);
+                            
+                            echo "[\n";
+                            echo "    \"" . addslashes($hsn['hsn_sac']) . "\",\n";
+                            echo "    \"" . addslashes($hsn['description']) . "\",\n";
+                            echo "    \"$formatted_qty\",\n";
+                            echo "    \"$formatted_amount\",\n";
+                            echo "    \"$formatted_cgst\",\n";
+                            echo "    \"$formatted_sgst\",\n";
+                            echo "    \"$formatted_igst\",\n";
+                            echo "    \"$formatted_total\"\n";
+                            echo "],\n";
+                        endwhile;
+                        $hsn_stmt->close();
+                        ?>
+                    ];
+                    
+                    // Create table element
+                    const tableElement = document.createElement('table');
+                    tableElement.id = 'hsn-summary-table';
+                    tableElement.className = 'table table-bordered table-striped';
+                    document.getElementById('hsn-summary-table-wrapper').appendChild(tableElement);
+                    
+                    // Initialize DataTable
                     $('#hsn-summary-table').DataTable({
                         "processing": true,
                         "serverSide": false,
@@ -578,85 +713,7 @@ $total_invoices = count($invoices_data);
                         "ordering": true,
                         "info": true,
                         "searching": true,
-                        "data": [
-                            <?php
-                            // Query to get HSN/SAC summary
-                            $hsn_query = "SELECT 
-                                id.hsn_sac,
-                                MAX(id.description) as description,
-                                SUM(id.qty) as total_qty,
-                                CAST(TRIM(REPLACE(REPLACE(SUM(id.amount), '262145 ', ''), '262145', '')) AS DECIMAL(10,2)) as total_amount,
-                                CAST(TRIM(REPLACE(REPLACE(SUM(id.cgst_amount), '262145 ', ''), '262145', '')) AS DECIMAL(10,2)) as total_cgst,
-                                CAST(TRIM(REPLACE(REPLACE(SUM(id.sgst_amount), '262145 ', ''), '262145', '')) AS DECIMAL(10,2)) as total_sgst,
-                                CAST(TRIM(REPLACE(REPLACE(SUM(id.igst_amount), '262145 ', ''), '262145', '')) AS DECIMAL(10,2)) as total_igst,
-                                CAST(TRIM(REPLACE(REPLACE(SUM(id.total), '262145 ', ''), '262145', '')) AS DECIMAL(10,2)) as grand_total
-                            FROM 
-                                invoice_details id
-                            JOIN 
-                                invoices i ON id.invoice_id = i.id
-                            WHERE 
-                                i.is_gst_invoice = 1
-                                 AND i.invoice_date BETWEEN ? AND ?";
-                             
-                            $params = [$from_date, $to_date];
-                            $types = "ss";
-                             
-                            if ($filter_customer) {
-                                $hsn_query .= " AND i.customer_id = ?";
-                                $params[] = $filter_customer;
-                                $types .= "i";
-                            }
-                            
-                            if ($filter_status) {
-                                $hsn_query .= " AND i.status = ?";
-                                $params[] = $filter_status;
-                                $types .= "s";
-                            }
-                             
-                            $hsn_query .= " GROUP BY id.hsn_sac ORDER BY id.hsn_sac";
-                             
-                            $hsn_stmt = $conn->prepare($hsn_query);
-                            $hsn_stmt->bind_param($types, ...$params);
-                            $hsn_stmt->execute();
-                            $hsn_result = $hsn_stmt->get_result();
-                             
-                            $total_hsn_amount = 0;
-                            $total_hsn_cgst = 0;
-                            $total_hsn_sgst = 0;
-                            $total_hsn_igst = 0;
-                            $total_hsn_grand = 0;
-                             
-                            while ($hsn = $hsn_result->fetch_assoc()):
-                                strip_prefix_from_array($hsn);
-                                
-                                $total_hsn_amount += floatval($hsn['total_amount']);
-                                $total_hsn_cgst += floatval($hsn['total_cgst']);
-                                $total_hsn_sgst += floatval($hsn['total_sgst']);
-                                $total_hsn_igst += floatval($hsn['total_igst']);
-                                $total_hsn_grand += floatval($hsn['grand_total']);
-                                
-                                // Format for DataTable
-                                $formatted_qty = display_number($hsn['total_qty']);
-                                $formatted_amount = CURRENCY_SYMBOL . ' ' . display_number($hsn['total_amount']);
-                                $formatted_cgst = CURRENCY_SYMBOL . ' ' . display_number($hsn['total_cgst']);
-                                $formatted_sgst = CURRENCY_SYMBOL . ' ' . display_number($hsn['total_sgst']);
-                                $formatted_igst = CURRENCY_SYMBOL . ' ' . display_number($hsn['total_igst']);
-                                $formatted_total = CURRENCY_SYMBOL . ' ' . display_number($hsn['grand_total']);
-                                
-                                echo "[\n";
-                                echo "    \"" . addslashes($hsn['hsn_sac']) . "\",\n";
-                                echo "    \"" . addslashes($hsn['description']) . "\",\n";
-                                echo "    \"$formatted_qty\",\n";
-                                echo "    \"$formatted_amount\",\n";
-                                echo "    \"$formatted_cgst\",\n";
-                                echo "    \"$formatted_sgst\",\n";
-                                echo "    \"$formatted_igst\",\n";
-                                echo "    \"$formatted_total\"\n";
-                                echo "],\n";
-                            endwhile;
-                            $hsn_stmt->close();
-                            ?>
-                        ],
+                        "data": hsnData,
                         "columns": [
                             { "title": "HSN/SAC" },
                             { "title": "Description" },
@@ -877,13 +934,14 @@ $total_invoices = count($invoices_data);
                  
                 while ($hsn = $hsn_result->fetch_assoc()):
                     strip_prefix_from_array($hsn);
-                    
-                    $total_hsn_amount += floatval($hsn['total_amount']);
-                    $total_hsn_cgst += floatval($hsn['total_cgst']);
-                    $total_hsn_sgst += floatval($hsn['total_sgst']);
-                    $total_hsn_igst += floatval($hsn['total_igst']);
-                    $total_hsn_grand += floatval($hsn['grand_total']);
-                ?>
+                     
+                     // Accumulate totals for the HSN/SAC summary
+                     $total_hsn_amount += floatval($hsn['total_amount']);
+                     $total_hsn_cgst += floatval($hsn['total_cgst']);
+                     $total_hsn_sgst += floatval($hsn['total_sgst']);
+                     $total_hsn_igst += floatval($hsn['total_igst']);
+                     $total_hsn_grand += floatval($hsn['grand_total']);
+                 ?>
                 <tr>
                     <td><?= htmlspecialchars($hsn['hsn_sac']) ?></td>
                     <td><?= htmlspecialchars($hsn['description']) ?></td>
@@ -1002,6 +1060,7 @@ $total_invoices = count($invoices_data);
                 <!-- HSN/SAC Summary Report -->
                 <div class="no-print mb-3">
                     <h4 class="mt-3 mb-3">HSN/SAC Summary Report (<?= date('d-m-Y', strtotime($from_date)) ?> to <?= date('d-m-Y', strtotime($to_date)) ?>)</h4>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="printReport(true)">Print HSN/SAC Summary</button>
                 </div>
                 <div class="table-responsive print-section">
                     <table class="table table-bordered table-striped" id="hsn-summary-table">
@@ -1147,24 +1206,46 @@ $total_invoices = count($invoices_data);
 </div>
 
 <!-- Create a separate file for AJAX loading of invoice details -->
+<style>
+/* Direct CSS to eliminate duplicate table headers */
+.dataTable thead tr:nth-child(n+2),
+.dataTables_scrollHead {
+    display: none !important;
+}
+</style>
+
 <script>
 $(document).ready(function() {
+    // Remove any duplicate headers that might already exist in the DOM
+    $('.dataTable thead tr:gt(0)').remove();
+    
+    // Initialize DataTables with configuration that prevents duplicate headers
     $('#gst-invoices-table').DataTable({
         "order": [[0, "desc"]],
         "pageLength": 25,
-        "scrollX": true,
+        "scrollX": false, /* Disable scrollX to prevent duplicate headers */
+        "autoWidth": false,
         "columnDefs": [
             { "className": "text-nowrap", "targets": "_all" }
-        ]
+        ],
+        "drawCallback": function() {
+            // Remove any headers created during drawing
+            $(this).find('thead tr:gt(0)').remove();
+        }
     });
     
     $('#hsn-summary-table').DataTable({
         "order": [[0, "asc"]],
         "pageLength": 50,
-        "scrollX": true,
+        "scrollX": false, /* Disable scrollX to prevent duplicate headers */
+        "autoWidth": false,
         "columnDefs": [
             { "className": "text-nowrap", "targets": "_all" }
-        ]
+        ],
+        "drawCallback": function() {
+            // Remove any headers created during drawing
+            $(this).find('thead tr:gt(0)').remove();
+        }
     });
     
     // Print function for both report types
