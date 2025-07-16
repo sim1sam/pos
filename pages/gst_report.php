@@ -207,10 +207,12 @@ $total_invoices = count($invoices_data);
                 display: block !important;
                 width: 100% !important;
                 visibility: visible !important;
-                position: absolute !important;
+                position: relative !important; /* Changed from absolute to relative */
                 left: 0 !important;
                 top: 0 !important;
                 z-index: 9999 !important;
+                overflow: visible !important;
+                height: auto !important; /* Ensure height is based on content */
             }
             
             /* Basic print styling */
@@ -429,17 +431,18 @@ $total_invoices = count($invoices_data);
                     const style = document.createElement('style');
                     style.innerHTML = '@page { size: landscape !important; margin: 0.5cm; } ' +
                                      '@media print { ' +
-                                     '  html, body { overflow: visible !important; height: auto !important; } ' +
-                                     '  .print-container { display: block !important; visibility: visible !important; position: absolute !important; left: 0 !important; top: 0 !important; overflow: visible !important; } ' +
+                                     '  html, body { overflow: visible !important; height: auto !important; margin: 0 !important; padding: 0 !important; } ' +
+                                     '  .print-container { display: block !important; visibility: visible !important; position: relative !important; left: 0 !important; top: 0 !important; overflow: visible !important; page-break-after: avoid !important; } ' +
                                      '  .print-container * { visibility: visible !important; } ' +
                                      '  body > *:not(.print-container) { display: none !important; } ' +
                                      '  .print-table { width: 100% !important; border-collapse: collapse !important; page-break-inside: auto !important; } ' +
                                      '  .print-table thead { display: table-header-group; } ' +
                                      '  .print-table tr { page-break-inside: avoid !important; page-break-after: auto !important; } ' +
                                      '  .print-table th, .print-table td { border: 1px solid #000 !important; padding: 4px !important; } ' +
-                                     '  @page { margin: 1cm; } ' +
+                                     '  @page { margin: 0.5cm; } ' +
                                      '  h2.report-title { display: block; text-align: center; font-size: 18px; margin-bottom: 10px; } ' +
-                                     '}';
+                                     '  html { height: auto !important; } ' +
+                                     '}'; 
                     style.id = 'forceLandscape';
                     document.head.appendChild(style);
                     
@@ -968,20 +971,20 @@ $total_invoices = count($invoices_data);
         <?php endif; ?>
         
         <!-- Print Footer -->
-        <div style="margin-top: 20px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 10px;">
+        <div style="margin-top: 10px; padding-top: 5px; border-top: 1px solid #ddd; font-size: 10px; page-break-inside: avoid;">
             <div style="display: flex; justify-content: space-between;">
                 <div style="text-align: left;">
-                    <p>For <?= htmlspecialchars($company['name'] ?? '') ?></p>
+                    <p style="margin: 0;">For <?= htmlspecialchars($company['name'] ?? '') ?></p>
                 </div>
                 <div style="text-align: right;">
-                    <p>Authorized Signatory</p>
+                    <p style="margin: 0;">Authorized Signatory</p>
                 </div>
             </div>
-            <div class="text-center" style="margin-top: 15px; font-size: 8px;">
-                <p>Page <span class="page-number"></span></p>
+            <div class="text-center" style="margin-top: 5px; font-size: 8px;">
+                <p style="margin: 0;">Page <span class="page-number"></span></p>
             </div>
         </div>
-    </div>
+    </div> <!-- End of print-container -->
     
     <!-- Regular display table (non-print) -->
     <?php if ($invoices->num_rows > 0 && !$hsn_summary): ?>
