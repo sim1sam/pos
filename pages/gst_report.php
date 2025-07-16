@@ -610,9 +610,7 @@ $total_invoices = count($invoices_data);
         </div>
     <?php elseif ($invoices->num_rows > 0 && $hsn_summary): ?>
         <!-- HSN/SAC Summary Report -->
-        <div class="no-print mb-3">
-            <h4 class="mt-3 mb-3">HSN/SAC Summary Report (<?= date('d-m-Y', strtotime($from_date)) ?> to <?= date('d-m-Y', strtotime($to_date)) ?>)</h4>
-        </div>
+        <!-- First tile heading removed as requested -->
         <div class="table-responsive print-section" id="hsn-summary-container">
             <div id="hsn-summary-table-wrapper"></div>
             
