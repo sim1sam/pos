@@ -451,13 +451,7 @@ $total_invoices = count($invoices_data);
                     style.id = 'forceLandscape';
                     document.head.appendChild(style);
                     
-                    // Update the report title based on the report type
-                    const reportTitleElement = printContainer.querySelector('#print-report-title');
-                    if (reportTitleElement) {
-                        reportTitleElement.textContent = isHsnSummary ? 'HSN/SAC Summary Report' : 'GST Invoice Report';
-                        reportTitleElement.style.textAlign = 'right';
-                        reportTitleElement.style.marginRight = '10px';
-                    }
+                    // We're now using static titles in the HTML, no need to update dynamically
                     
                     // Trigger print
                     window.print();
@@ -754,19 +748,6 @@ $total_invoices = count($invoices_data);
         strip_prefix_from_array($company);
         ?>
         
-        <!-- Report title and info at the very top right -->
-        <div style="text-align: right; margin-bottom: 10px;">
-            <h2 id="print-report-title" style="margin: 0; font-size: 18px; font-weight: bold;"></h2>
-            <p style="margin: 0; font-size: 12px;">
-                <strong>Period:</strong> <?= date('d-m-Y', strtotime($from_date)) ?> to <?= date('d-m-Y', strtotime($to_date)) ?>
-            </p>
-            <?php if ($hsn_summary): ?>
-                <p style="margin: 0; font-size: 12px;"><strong>Report Type:</strong> HSN/SAC Summary</p>
-            <?php else: ?>
-                <p style="margin: 0; font-size: 12px;"><strong>Report Type:</strong> Detailed GST Invoice</p>
-            <?php endif; ?>
-        </div>
-        
         <!-- Print Header with Company Info -->
         <div class="row mb-3 company-header">
             <div class="col-6">
@@ -785,36 +766,42 @@ $total_invoices = count($invoices_data);
                 <p style="margin: 0; font-size: 11px;"><strong>GSTIN:</strong> <?= htmlspecialchars($company['gstin']) ?></p>
                 <?php endif; ?>
             </div>
-            <div class="col-6 text-end">
-                <?php if ($filter_customer): ?>
-                    <?php
-                    $customer_name_query = "SELECT name FROM customers WHERE id = ?";
-                    $stmt = $conn->prepare($customer_name_query);
-                    $stmt->bind_param("i", $filter_customer);
-                    $stmt->execute();
-                    $result = $stmt->get_result();
-                    if ($row = $result->fetch_assoc()) {
-                        echo '<p style="margin: 0; font-size: 12px;"><strong>Customer:</strong> ' . htmlspecialchars($row['name']) . '</p>';
-                    }
-                    $stmt->close();
-                    ?>
-                <?php endif; ?>
-                <?php if ($filter_status): ?>
-                    <p style="margin: 0; font-size: 12px;"><strong>Status:</strong> <?= htmlspecialchars($filter_status) ?></p>
-                <?php endif; ?>
-            </div>
         </div>
         
-        <!-- Report Title at Top Right -->
-        <?php if ($hsn_summary): ?>
-        <div style="text-align: right; margin-bottom: 15px; margin-right: 10px;">
-            <h2 id="print-report-title" style="margin: 0; font-size: 16px; color: #333; font-weight: bold;">HSN/SAC Summary Report</h2>
+        <!-- Report Title and Info (Center) -->
+        <div style="text-align: center; margin-bottom: 10px;">
+            <?php if ($hsn_summary): ?>
+                <h2 style="margin: 0; font-size: 18px; font-weight: bold;">HSN/SAC Summary Report</h2>
+            <?php else: ?>
+                <h2 style="margin: 0; font-size: 18px; font-weight: bold;">GST Invoice Report</h2>
+            <?php endif; ?>
+            <p style="margin: 5px 0; font-size: 12px;">
+                <strong>Period:</strong> <?= date('d-m-Y', strtotime($from_date)) ?> to <?= date('d-m-Y', strtotime($to_date)) ?>
+                <?php if ($hsn_summary): ?>
+                    <span style="margin-left: 10px;"><strong>Report Type:</strong> HSN/SAC Summary</span>
+                <?php else: ?>
+                    <span style="margin-left: 10px;"><strong>Report Type:</strong> Detailed GST Invoice</span>
+                <?php endif; ?>
+            </p>
+            <?php if ($filter_customer): ?>
+                <?php
+                $customer_name_query = "SELECT name FROM customers WHERE id = ?";
+                $stmt = $conn->prepare($customer_name_query);
+                $stmt->bind_param("i", $filter_customer);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                if ($row = $result->fetch_assoc()) {
+                    echo '<p style="margin: 0; font-size: 12px;"><strong>Customer:</strong> ' . htmlspecialchars($row['name']) . '</p>';
+                }
+                $stmt->close();
+                ?>
+            <?php endif; ?>
+            <?php if ($filter_status): ?>
+                <p style="margin: 0; font-size: 12px;"><strong>Status:</strong> <?= htmlspecialchars($filter_status) ?></p>
+            <?php endif; ?>
         </div>
-        <?php else: ?>
-        <div style="text-align: right; margin-bottom: 15px; margin-right: 10px;">
-            <h2 id="print-report-title" style="margin: 0; font-size: 16px; color: #333; font-weight: bold;">GST Invoice Report</h2>
-        </div>
-        <?php endif; ?>
+        
+        <!-- Report tables follow below -->
         
         <!-- Print Table -->
         <?php if (!$hsn_summary): ?>
