@@ -227,6 +227,8 @@ $total_invoices = count($invoices_data);
                 width: 100% !important;
                 border-collapse: collapse !important;
                 font-size: 10px !important;
+                border: 2px solid #000 !important;
+                margin-bottom: 20px !important;
             }
             
             .print-table th {
@@ -238,7 +240,8 @@ $total_invoices = count($invoices_data);
             
             .print-table td {
                 padding: 3px !important;
-                border-bottom: 1px solid #eee !important;
+                border: 1px solid #000 !important;
+                border-bottom: 1px solid #000 !important;
             }
             
             /* Repeat table headers on each page */
@@ -246,14 +249,37 @@ $total_invoices = count($invoices_data);
                 display: table-header-group !important;
             }
             
+            /* Style the grand total row */
+            .grand-total-row {
+                font-weight: bold !important;
+                background-color: #f5f5f5 !important;
+                border-top: 2px solid #000 !important;
+            }
+            
+            /* Make sure the grand total row only appears on the last page */
+            @media print {
+                .grand-total-row {
+                    display: table-row !important;
+                    page-break-inside: avoid !important;
+                    page-break-before: auto !important;
+                    page-break-after: avoid !important;
+                }
+                
+                /* Force the grand total row to stay with at least some data rows */
+                tbody tr:nth-last-child(-n+3),
+                .grand-total-row {
+                    page-break-inside: avoid !important;
+                }
+            }
+            
             /* Avoid page breaks inside rows */
             tr {
                 page-break-inside: avoid !important;
             }
             
-            /* Ensure landscape orientation */
+            /* Ensure landscape orientation with proper margins */
             @page {
-                margin: 5mm;
+                margin: 10mm 10mm 15mm 10mm; /* top right bottom left */
                 size: landscape !important;
                 counter-increment: page;
             }
@@ -436,7 +462,7 @@ $total_invoices = count($invoices_data);
                                      '  .print-container * { visibility: visible !important; box-sizing: border-box !important; } ' +
                                      '  body > *:not(.print-container) { display: none !important; } ' +
                                      '  h1.mt-4, .breadcrumb { display: none !important; } ' +
-                                     '  .print-table { width: 99% !important; max-width: 99% !important; table-layout: fixed !important; border-collapse: collapse !important; page-break-inside: auto !important; font-size: 9px !important; margin-bottom: 10px !important; border: 2px solid #000 !important; } ' +
+                                     '  .print-table { width: 98% !important; max-width: 98% !important; table-layout: fixed !important; border-collapse: collapse !important; page-break-inside: auto !important; font-size: 9px !important; margin: 0 auto 15px auto !important; border: 2px solid #000 !important; } ' +
                                      '  .print-table thead { display: table-header-group !important; } ' +
                                      '  .print-table tr { page-break-inside: avoid !important; page-break-after: auto !important; } ' +
                                      '  .print-table th, .print-table td { border: 1px solid #000 !important; padding: 2px !important; overflow: visible !important; word-break: break-word !important; } ' +
@@ -768,8 +794,8 @@ $total_invoices = count($invoices_data);
             </div>
         </div>
         
-        <!-- Report Title and Info (Center) -->
-        <div style="text-align: center; margin-bottom: 10px;">
+        <!-- Report Title and Info (Top Right) -->
+        <div style="text-align: right; margin-bottom: 10px;">
             <?php if ($hsn_summary): ?>
                 <h2 style="margin: 0; font-size: 18px; font-weight: bold;">HSN/SAC Summary Report</h2>
             <?php else: ?>
@@ -867,17 +893,16 @@ $total_invoices = count($invoices_data);
                 $stmt->close();
             endwhile; 
             ?>
+            <!-- Grand Total Row (will only appear once at the end) -->
+            <tr class="grand-total-row">
+                <th colspan="6">Total</th>
+                <th><?= CURRENCY_SYMBOL ?> <?= display_number($total_amount - $total_cgst - $total_sgst - $total_igst) ?></th>
+                <th><?= CURRENCY_SYMBOL ?> <?= display_number($total_cgst) ?></th>
+                <th><?= CURRENCY_SYMBOL ?> <?= display_number($total_sgst) ?></th>
+                <th><?= CURRENCY_SYMBOL ?> <?= display_number($total_igst) ?></th>
+                <th><?= CURRENCY_SYMBOL ?> <?= display_number($total_amount) ?></th>
+            </tr>
             </tbody>
-            <tfoot>
-                <tr>
-                    <th colspan="6">Total</th>
-                    <th><?= CURRENCY_SYMBOL ?> <?= display_number($total_amount - $total_cgst - $total_sgst - $total_igst) ?></th>
-                    <th><?= CURRENCY_SYMBOL ?> <?= display_number($total_cgst) ?></th>
-                    <th><?= CURRENCY_SYMBOL ?> <?= display_number($total_sgst) ?></th>
-                    <th><?= CURRENCY_SYMBOL ?> <?= display_number($total_igst) ?></th>
-                    <th><?= CURRENCY_SYMBOL ?> <?= display_number($total_amount) ?></th>
-                </tr>
-            </tfoot>
         </table>
         <?php else: ?>
         <!-- HSN Summary Print Table -->
@@ -964,17 +989,16 @@ $total_invoices = count($invoices_data);
                 <?php endwhile; 
                 $hsn_stmt->close();
                 ?>
+            <!-- Grand Total Row (will only appear once at the end) -->
+            <tr class="grand-total-row">
+                <th colspan="3">Total</th>
+                <th><?= CURRENCY_SYMBOL ?> <?= display_number($total_hsn_amount) ?></th>
+                <th><?= CURRENCY_SYMBOL ?> <?= display_number($total_hsn_cgst) ?></th>
+                <th><?= CURRENCY_SYMBOL ?> <?= display_number($total_hsn_sgst) ?></th>
+                <th><?= CURRENCY_SYMBOL ?> <?= display_number($total_hsn_igst) ?></th>
+                <th><?= CURRENCY_SYMBOL ?> <?= display_number($total_hsn_grand) ?></th>
+            </tr>
             </tbody>
-            <tfoot>
-                <tr>
-                    <th colspan="3">Total</th>
-                    <th><?= CURRENCY_SYMBOL ?> <?= display_number($total_hsn_amount) ?></th>
-                    <th><?= CURRENCY_SYMBOL ?> <?= display_number($total_hsn_cgst) ?></th>
-                    <th><?= CURRENCY_SYMBOL ?> <?= display_number($total_hsn_sgst) ?></th>
-                    <th><?= CURRENCY_SYMBOL ?> <?= display_number($total_hsn_igst) ?></th>
-                    <th><?= CURRENCY_SYMBOL ?> <?= display_number($total_hsn_grand) ?></th>
-                </tr>
-            </tfoot>
         </table>
         <?php endif; ?>
         
