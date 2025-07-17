@@ -169,8 +169,8 @@ $total_invoices = count($invoices_data);
 ?>
 
 <div class="container-fluid px-4">
-    <h1 class="mt-4">GST Invoice Report</h1>
-    <ol class="breadcrumb mb-4">
+    <h1 class="mt-4 no-print">GST Invoice Report</h1>
+    <ol class="breadcrumb mb-4 no-print">
         <li class="breadcrumb-item"><a href="../pages/dashboard.php">Dashboard</a></li>
         <li class="breadcrumb-item active">GST Invoice Report</li>
     </ol>
@@ -427,30 +427,36 @@ $total_invoices = count($invoices_data);
                     // Move print container to the body to avoid inheritance issues
                     document.body.appendChild(printContainer);
                     
-                    // Force landscape mode and ensure print container is visible
+                    // Force landscape mode and ensure print container is visible with no cropping
                     const style = document.createElement('style');
-                    style.innerHTML = '@page { size: landscape !important; margin: 0.5cm; } ' +
+                    style.innerHTML = '@page { size: landscape !important; margin: 0.2cm !important; } ' +
                                      '@media print { ' +
-                                     '  html, body { overflow: visible !important; height: auto !important; margin: 0 !important; padding: 0 !important; } ' +
-                                     '  .print-container { display: block !important; visibility: visible !important; position: relative !important; left: 0 !important; top: 0 !important; overflow: visible !important; page-break-after: avoid !important; } ' +
-                                     '  .print-container * { visibility: visible !important; } ' +
+                                     '  html, body { overflow: visible !important; height: auto !important; margin: 0 !important; padding: 0 !important; width: 100% !important; } ' +
+                                     '  .print-container { display: block !important; visibility: visible !important; position: relative !important; left: 0 !important; top: 0 !important; overflow: visible !important; page-break-after: avoid !important; width: 100% !important; max-width: 100% !important; padding: 0.5cm !important; box-sizing: border-box !important; } ' +
+                                     '  .print-container * { visibility: visible !important; box-sizing: border-box !important; } ' +
                                      '  body > *:not(.print-container) { display: none !important; } ' +
-                                     '  .print-table { width: 100% !important; border-collapse: collapse !important; page-break-inside: auto !important; } ' +
-                                     '  .print-table thead { display: table-header-group; } ' +
+                                     '  h1.mt-4, .breadcrumb { display: none !important; } ' +
+                                     '  .print-table { width: 99% !important; max-width: 99% !important; table-layout: fixed !important; border-collapse: collapse !important; page-break-inside: auto !important; font-size: 9px !important; margin-bottom: 10px !important; border: 2px solid #000 !important; } ' +
+                                     '  .print-table thead { display: table-header-group !important; } ' +
                                      '  .print-table tr { page-break-inside: avoid !important; page-break-after: auto !important; } ' +
-                                     '  .print-table th, .print-table td { border: 1px solid #000 !important; padding: 4px !important; } ' +
-                                     '  @page { margin: 0.5cm; } ' +
-                                     '  h2.report-title { display: block; text-align: center; font-size: 18px; margin-bottom: 10px; } ' +
-                                     '  html { height: auto !important; } ' +
+                                     '  .print-table th, .print-table td { border: 1px solid #000 !important; padding: 2px !important; overflow: visible !important; word-break: break-word !important; } ' +
+                                     '  .print-table th { font-weight: bold !important; background-color: #f8f9fa !important; } ' +
+                                     '  .print-table th:last-child, .print-table td:last-child { border-right: 3px solid #000 !important; } ' +
+                                     '  .print-table tr td:last-child, .print-table tr th:last-child { border-right-width: 3px !important; } ' +
+                                     '  @page { size: landscape !important; margin: 0.2cm !important; } ' +
+                                     '  #print-report-title { display: block; text-align: right !important; font-size: 18px; margin: 0 !important; padding: 10px 10px 0 0 !important; font-weight: bold; } ' +
+                                     '  html { height: auto !important; width: 100% !important; } ' +
+                                     '  .row { width: 100% !important; max-width: 100% !important; } ' +
                                      '}'; 
                     style.id = 'forceLandscape';
                     document.head.appendChild(style);
                     
                     // Update the report title based on the report type
-                    const reportTitleElement = printContainer.querySelector('h2');
+                    const reportTitleElement = printContainer.querySelector('#print-report-title');
                     if (reportTitleElement) {
                         reportTitleElement.textContent = isHsnSummary ? 'HSN/SAC Summary Report' : 'GST Invoice Report';
-                        reportTitleElement.classList.add('report-title');
+                        reportTitleElement.style.textAlign = 'right';
+                        reportTitleElement.style.marginRight = '10px';
                     }
                     
                     // Trigger print
@@ -748,6 +754,19 @@ $total_invoices = count($invoices_data);
         strip_prefix_from_array($company);
         ?>
         
+        <!-- Report title and info at the very top right -->
+        <div style="text-align: right; margin-bottom: 10px;">
+            <h2 id="print-report-title" style="margin: 0; font-size: 18px; font-weight: bold;"></h2>
+            <p style="margin: 0; font-size: 12px;">
+                <strong>Period:</strong> <?= date('d-m-Y', strtotime($from_date)) ?> to <?= date('d-m-Y', strtotime($to_date)) ?>
+            </p>
+            <?php if ($hsn_summary): ?>
+                <p style="margin: 0; font-size: 12px;"><strong>Report Type:</strong> HSN/SAC Summary</p>
+            <?php else: ?>
+                <p style="margin: 0; font-size: 12px;"><strong>Report Type:</strong> Detailed GST Invoice</p>
+            <?php endif; ?>
+        </div>
+        
         <!-- Print Header with Company Info -->
         <div class="row mb-3 company-header">
             <div class="col-6">
@@ -767,10 +786,6 @@ $total_invoices = count($invoices_data);
                 <?php endif; ?>
             </div>
             <div class="col-6 text-end">
-                <h2 style="margin-top: 10px; font-size: 18px;">GST Invoice Report</h2>
-                <p style="margin: 0; font-size: 12px;">
-                    <strong>Period:</strong> <?= date('d-m-Y', strtotime($from_date)) ?> to <?= date('d-m-Y', strtotime($to_date)) ?>
-                </p>
                 <?php if ($filter_customer): ?>
                     <?php
                     $customer_name_query = "SELECT name FROM customers WHERE id = ?";
@@ -787,13 +802,19 @@ $total_invoices = count($invoices_data);
                 <?php if ($filter_status): ?>
                     <p style="margin: 0; font-size: 12px;"><strong>Status:</strong> <?= htmlspecialchars($filter_status) ?></p>
                 <?php endif; ?>
-                <?php if ($hsn_summary): ?>
-                    <p style="margin: 0; font-size: 12px;"><strong>Report Type:</strong> HSN/SAC Summary</p>
-                <?php else: ?>
-                    <p style="margin: 0; font-size: 12px;"><strong>Report Type:</strong> Detailed GST Invoice</p>
-                <?php endif; ?>
             </div>
         </div>
+        
+        <!-- Report Title at Top Right -->
+        <?php if ($hsn_summary): ?>
+        <div style="text-align: right; margin-bottom: 15px; margin-right: 10px;">
+            <h2 id="print-report-title" style="margin: 0; font-size: 16px; color: #333; font-weight: bold;">HSN/SAC Summary Report</h2>
+        </div>
+        <?php else: ?>
+        <div style="text-align: right; margin-bottom: 15px; margin-right: 10px;">
+            <h2 id="print-report-title" style="margin: 0; font-size: 16px; color: #333; font-weight: bold;">GST Invoice Report</h2>
+        </div>
+        <?php endif; ?>
         
         <!-- Print Table -->
         <?php if (!$hsn_summary): ?>
